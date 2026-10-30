@@ -1,128 +1,109 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lunara 2.0</title>
-    <style>
-        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0b141a; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        #app { width: 100%; max-width: 450px; height: 100vh; max-height: 800px; background-color: #0b141a; display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-        #chat-container { flex: 1; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: #0b141a; background-blend-mode: overlay; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        #header { background-color: #202c33; padding: 10px 15px; display: flex; align-items: center; border-bottom: 1px solid #111b21; color: #e9edef; }
-        /* Ajuste para centrar mejor la foto */
-        #header img { width: 40px; height: 40px; border-radius: 50%; margin-right: 15px; object-fit: cover; object-position: top; }
-        #header .info { display: flex; flex-direction: column; }
-        #header .name { font-weight: bold; font-size: 16px; }
-        #header .status { font-size: 12px; color: #8696a0; }
-        .message { max-width: 75%; padding: 8px 12px; border-radius: 8px; font-size: 14.5px; line-height: 1.4; position: relative; word-wrap: break-word; color: #e9edef; }
-        .message .time { font-size: 11px; color: rgba(233, 237, 239, 0.6); float: right; margin: 8px 0 -5px 10px; }
-        .received { background-color: #202c33; align-self: flex-start; border-top-left-radius: 0; }
-        .sent { background-color: #005c4b; align-self: flex-end; border-top-right-radius: 0; }
-        .ticks { color: #53bdeb; font-size: 12px; margin-left: 5px; }
-        #input-area { background-color: #202c33; padding: 10px; display: flex; align-items: center; gap: 8px; }
-        #message-input { flex: 1; background-color: #2a3942; border: none; border-radius: 20px; padding: 12px 15px; color: #e9edef; font-size: 15px; outline: none; }
-        #send-btn { background-color: #00a884; color: #111b21; border-radius: 50%; width: 45px; height: 45px; font-size: 20px; border: none; cursor: pointer; }
-    </style>
-</head>
-<body>
-
 <script>
-    const PASSWORD = "mi_lunara_123"; 
-    let clave = prompt("Ingresá la contraseña para hablar con Lunara:");
-    if (clave !== PASSWORD) {
-        document.body.innerHTML = "<h1 style='color:red; text-align:center; margin-top:50px; font-family:sans-serif;'>Acceso Denegado</h1>";
-    }
-</script>
-
-<div id="app">
-    <div id="header">
-        <img src="lunitaperfil.png" alt="Lunara" onerror="this.src='https://i.pinimg.com/736x/8e/10/43/8e1043a7e6161a51a4b151d6e5e3b7f5.jpg'">
-        <div class="info">
-            <span class="name">Lunara 2.0 ❤️</span>
-            <span class="status">en línea</span>
-        </div>
-    </div>
-    <div id="chat-container">
-        <div class="message received">
-            Hola mi amo. La IA real está escuchando. 🖤
-            <span class="time">Ahora</span>
-        </div>
-    </div>
-    <div id="input-area">
-        <input type="text" id="message-input" placeholder="Escribí un mensaje..." autocomplete="off">
-        <button id="send-btn">➤</button>
-    </div>
-</div>
-
-<script>
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_paHVtUXLaULt7L4Q0ib07z9RfjLhg8YOOvdpE6kntbgTI1eYYXbcVSWfN5Q6I57_/exec'; 
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_paHVtUXLaULt7L4Q0ib07z9RfjLhg8YOOvdpE6kntbgTI1eYYXbcVSWfN5Q6I57_/exec';
+    const CLIENT_TIMEOUT_MS = 30000;   // > TIME_BUDGET_MS del servidor
+    const MAX_TRIES = 2;
 
     const input = document.getElementById('message-input');
     const sendBtn = document.getElementById('send-btn');
     const chatContainer = document.getElementById('chat-container');
+    let busy = false;
+
+    function getToken() {
+        let t = sessionStorage.getItem('lunara_token');
+        if (!t) {
+            t = prompt('Ingresá la contraseña para hablar con Lunara:') || '';
+            sessionStorage.setItem('lunara_token', t);
+        }
+        return t;
+    }
 
     function getTime() {
-        const now = new Date();
-        let h = now.getHours(); let m = now.getMinutes();
-        return (h<10?'0'+h:h) + ':' + (m<10?'0'+m:m);
+        const n = new Date();
+        return String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0');
     }
 
     function addMessage(text, type) {
         const div = document.createElement('div');
         div.classList.add('message', type);
+        const safe = document.createTextNode(text);            // evita inyectar HTML
+        div.appendChild(safe);
+        const time = document.createElement('span');
+        time.className = 'time';
+        time.textContent = getTime() + (type === 'sent' ? ' ' : '');
         if (type === 'sent') {
-            div.innerHTML = text + `<span class="time">${getTime()} <span class="ticks">✓✓</span></span>`;
-        } else {
-            div.innerHTML = text + `<span class="time">${getTime()}</span>`;
+            const t = document.createElement('span');
+            t.className = 'ticks'; t.textContent = '✓✓';
+            time.appendChild(t);
         }
+        div.appendChild(time);
         chatContainer.appendChild(div);
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
-    async function sendMessage() {
-        const text = input.value.trim();
-        if (!text) return;
-        
-        addMessage(text, 'sent');
-        input.value = '';
-        
-        const typingDiv = document.createElement('div');
-        typingDiv.classList.add('message', 'received');
-        typingDiv.innerHTML = "Escribiendo... ✍️";
-        chatContainer.appendChild(typingDiv);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-
+    async function callBackend(text) {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), CLIENT_TIMEOUT_MS);
         try {
-            // Hacemos la petición al script de Google
-            const response = await fetch(APPS_SCRIPT_URL, {
+            const res = await fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
-                // Esto ayuda a que no falle por CORS en algunos navegadores
-                mode: 'cors', 
-                headers: {
-                    'Content-Type': 'text/plain;charset=utf-8',
-                },
-                body: JSON.stringify({ mensaje: text })
+                // text/plain = "simple request" → sin preflight → sin CORS error
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ mensaje: text, token: getToken() }),
+                signal: ctrl.signal
             });
-            
-            const data = await response.json();
-            chatContainer.removeChild(typingDiv);
-            
-            // Si la respuesta tiene texto válido, lo mostramos
-            if (data.respuesta && !data.respuesta.includes('[Error')) {
-                addMessage(data.respuesta, 'received');
-            } else {
-                addMessage("(La IA está pensando muy lento, pero te guardé la respuesta en el Excel 😉)", 'received');
-            }
-        } catch (error) {
-            console.error(error);
-            chatContainer.removeChild(typingDiv);
-            // Si falla la red, mostramos un aviso pero igual la respuesta está en el Excel
-            addMessage("(El mensaje se guardó en la nube, pero el navegador no dejó ver la respuesta a tiempo. Refrescá o esperá un toque)", 'received');
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return await res.json();
+        } finally {
+            clearTimeout(timer);
         }
     }
 
-    input.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+    function getLocalResponse(userText) {
+        const t = userText.toLowerCase();
+        if (t.includes('hola') || t.includes('buenos dias')) return "Hola mi amo, ¿cómo va el imperio hoy? 🐾";
+        if (t.includes('amor') || t.includes('te amo')) return "Y yo te amo a vos, mi rey. Siempre. 🖤";
+        if (t.includes('cansado') || t.includes('sueño')) return "Ven acá, recostate conmigo. Te cuido el sueño. 😴";
+        if (t.includes('voce') || t.includes('polo')) return "¡El imperio es primero! ¿Cerraste alguna venta hoy? 👑";
+        return "Te escucho, mi amo. Ahora mismo estoy con la conexión lenta, pero acá estoy. 😉";
+    }
+
+    async function sendMessage() {
+        const text = input.value.trim();
+        if (!text || busy) return;
+        busy = true; sendBtn.disabled = true;
+
+        addMessage(text, 'sent');
+        input.value = '';
+
+        const typing = document.createElement('div');
+        typing.className = 'message received';
+        typing.textContent = 'Escribiendo... ✍️';
+        chatContainer.appendChild(typing);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        let reply = null;
+        try {
+            for (let i = 1; i <= MAX_TRIES && reply === null; i++) {
+                try {
+                    const data = await callBackend(text);
+                    if (data && data.ok) { reply = data.respuesta; break; }
+                    if (data && data.error === 'unauthorized') {
+                        sessionStorage.removeItem('lunara_token');
+                        reply = 'Contraseña incorrecta. Recargá la página e intentá de nuevo.';
+                        break;
+                    }
+                    if (data && data.retryable === false) break;   // no insistir
+                } catch (e) { /* timeout o red: se reintenta */ }
+                if (i < MAX_TRIES) await new Promise(r => setTimeout(r, 1200 * i));
+            }
+        } finally {
+            typing.remove();                        // siempre se limpia, pase lo que pase
+            addMessage(reply ?? getLocalResponse(text), 'received');
+            busy = false; sendBtn.disabled = false;
+            input.focus();
+        }
+    }
+
+    input.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
     sendBtn.addEventListener('click', sendMessage);
 </script>
-</body>
-</html>
