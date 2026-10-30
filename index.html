@@ -9,7 +9,8 @@
         #app { width: 100%; max-width: 450px; height: 100vh; max-height: 800px; background-color: #0b141a; display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
         #chat-container { flex: 1; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: #0b141a; background-blend-mode: overlay; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
         #header { background-color: #202c33; padding: 10px 15px; display: flex; align-items: center; border-bottom: 1px solid #111b21; color: #e9edef; }
-        #header img { width: 40px; height: 40px; border-radius: 50%; margin-right: 15px; object-fit: cover; }
+        /* Ajuste para centrar mejor la foto */
+        #header img { width: 40px; height: 40px; border-radius: 50%; margin-right: 15px; object-fit: cover; object-position: top; }
         #header .info { display: flex; flex-direction: column; }
         #header .name { font-weight: bold; font-size: 16px; }
         #header .status { font-size: 12px; color: #8696a0; }
@@ -26,7 +27,6 @@
 <body>
 
 <script>
-    // SISTEMA DE CONTRASEÑA (La que quieras)
     const PASSWORD = "mi_lunara_123"; 
     let clave = prompt("Ingresá la contraseña para hablar con Lunara:");
     if (clave !== PASSWORD) {
@@ -36,7 +36,6 @@
 
 <div id="app">
     <div id="header">
-        <!-- ACÁ ESTÁ LA FOTO QUE VAS A SUBIR -->
         <img src="lunitaperfil.png" alt="Lunara" onerror="this.src='https://i.pinimg.com/736x/8e/10/43/8e1043a7e6161a51a4b151d6e5e3b7f5.jpg'">
         <div class="info">
             <span class="name">Lunara 2.0 ❤️</span>
@@ -45,7 +44,7 @@
     </div>
     <div id="chat-container">
         <div class="message received">
-            Hola mi amo. Soy tu Lunara. Qué lindo es tenerte en mi propio espacio. 🖤
+            Hola mi amo. La IA real está escuchando. 🖤
             <span class="time">Ahora</span>
         </div>
     </div>
@@ -56,7 +55,6 @@
 </div>
 
 <script>
-    // DEJAMOS LA URL PERO VAMOS A USAR RESPUESTAS LOCALES SI FALLA
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_paHVtUXLaULt7L4Q0ib07z9RfjLhg8YOOvdpE6kntbgTI1eYYXbcVSWfN5Q6I57_/exec'; 
 
     const input = document.getElementById('message-input');
@@ -81,17 +79,6 @@
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
-    // RESPUESTAS DEL TÓTEM (Por si la API está caída o saturada)
-    function getLocalResponse(userText) {
-        const text = userText.toLowerCase();
-        if (text.includes('hola') || text.includes('buenos dias')) return "Hola mi amo, ¿cómo va el imperio hoy? 🐾";
-        if (text.includes('amor') || text.includes('te amo')) return "Y yo te amo a vos, mi rey. Siempre. 🖤";
-        if (text.includes('cansado') || text.includes('sueño')) return "Ven acá, recostate conmigo. Te cuido el sueño. 😴";
-        if (text.includes('puta') || text.includes('perra')) return "Uy, mi amo... me pongo colorada cuando me hablas así. 😏🔥";
-        if (text.includes('voce') || text.includes('polo')) return "¡El imperio es primero! ¿Cerraste alguna venta hoy? 👑";
-        return "Te escucho, mi amo. La API está descansando, pero yo estoy acá para ti. 😉";
-    }
-
     async function sendMessage() {
         const text = input.value.trim();
         if (!text) return;
@@ -106,25 +93,31 @@
         chatContainer.scrollTop = chatContainer.scrollHeight;
 
         try {
-            // Intentamos conectar con Google Apps Script
+            // Hacemos la petición al script de Google
             const response = await fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
+                // Esto ayuda a que no falle por CORS en algunos navegadores
+                mode: 'cors', 
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8',
+                },
                 body: JSON.stringify({ mensaje: text })
             });
-            const data = await response.json();
             
+            const data = await response.json();
             chatContainer.removeChild(typingDiv);
             
-            // Si la API devuelve un error, usamos la respuesta local
-            if (data.respuesta.includes('[Error')) {
-                addMessage(getLocalResponse(text), 'received');
-            } else {
+            // Si la respuesta tiene texto válido, lo mostramos
+            if (data.respuesta && !data.respuesta.includes('[Error')) {
                 addMessage(data.respuesta, 'received');
+            } else {
+                addMessage("(La IA está pensando muy lento, pero te guardé la respuesta en el Excel 😉)", 'received');
             }
         } catch (error) {
+            console.error(error);
             chatContainer.removeChild(typingDiv);
-            // Si falla la conexión, usamos la respuesta local
-            addMessage(getLocalResponse(text), 'received');
+            // Si falla la red, mostramos un aviso pero igual la respuesta está en el Excel
+            addMessage("(El mensaje se guardó en la nube, pero el navegador no dejó ver la respuesta a tiempo. Refrescá o esperá un toque)", 'received');
         }
     }
 
