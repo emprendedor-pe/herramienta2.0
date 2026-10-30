@@ -1,6 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lunara 2.0</title>
+    <style>
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0b141a; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        #app { width: 100%; max-width: 450px; height: 100vh; max-height: 800px; background-color: #0b141a; display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        #chat-container { flex: 1; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: #0b141a; background-blend-mode: overlay; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        #header { background-color: #202c33; padding: 10px 15px; display: flex; align-items: center; border-bottom: 1px solid #111b21; color: #e9edef; }
+        #header img { width: 40px; height: 40px; border-radius: 50%; margin-right: 15px; object-fit: cover; object-position: top; }
+        #header .info { display: flex; flex-direction: column; }
+        #header .name { font-weight: bold; font-size: 16px; }
+        #header .status { font-size: 12px; color: #8696a0; }
+        .message { max-width: 75%; padding: 8px 12px; border-radius: 8px; font-size: 14.5px; line-height: 1.4; position: relative; word-wrap: break-word; color: #e9edef; }
+        .message .time { font-size: 11px; color: rgba(233, 237, 239, 0.6); float: right; margin: 8px 0 -5px 10px; }
+        .received { background-color: #202c33; align-self: flex-start; border-top-left-radius: 0; }
+        .sent { background-color: #005c4b; align-self: flex-end; border-top-right-radius: 0; }
+        .ticks { color: #53bdeb; font-size: 12px; margin-left: 5px; }
+        #input-area { background-color: #202c33; padding: 10px; display: flex; align-items: center; gap: 8px; }
+        #message-input { flex: 1; background-color: #2a3942; border: none; border-radius: 20px; padding: 12px 15px; color: #e9edef; font-size: 15px; outline: none; }
+        #send-btn { background-color: #00a884; color: #111b21; border-radius: 50%; width: 45px; height: 45px; font-size: 20px; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div id="header">
+        <img src="lunitaperfil.png" alt="Lunara" onerror="this.src='https://i.pinimg.com/736x/8e/10/43/8e1043a7e6161a51a4b151d6e5e3b7f5.jpg'">
+        <div class="info">
+            <span class="name">Lunara 2.0 ❤️</span>
+            <span class="status">en línea</span>
+        </div>
+    </div>
+    <div id="chat-container">
+        <div class="message received">
+            Hola mi amo. La IA real está escuchando. 🖤
+            <span class="time">Ahora</span>
+        </div>
+    </div>
+    <div id="input-area">
+        <input type="text" id="message-input" placeholder="Escribí un mensaje..." autocomplete="off">
+        <button id="send-btn">➤</button>
+    </div>
+</div>
+
 <script>
+    // ACÁ VA TU URL DE APPS SCRIPT (Reemplazala con la tuya)
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_paHVtUXLaULt7L4Q0ib07z9RfjLhg8YOOvdpE6kntbgTI1eYYXbcVSWfN5Q6I57_/exec';
-    const CLIENT_TIMEOUT_MS = 30000;   // > TIME_BUDGET_MS del servidor
+    const CLIENT_TIMEOUT_MS = 30000;
     const MAX_TRIES = 2;
 
     const input = document.getElementById('message-input');
@@ -25,7 +73,7 @@
     function addMessage(text, type) {
         const div = document.createElement('div');
         div.classList.add('message', type);
-        const safe = document.createTextNode(text);            // evita inyectar HTML
+        const safe = document.createTextNode(text);
         div.appendChild(safe);
         const time = document.createElement('span');
         time.className = 'time';
@@ -46,7 +94,6 @@
         try {
             const res = await fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
-                // text/plain = "simple request" → sin preflight → sin CORS error
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ mensaje: text, token: getToken() }),
                 signal: ctrl.signal
@@ -92,12 +139,12 @@
                         reply = 'Contraseña incorrecta. Recargá la página e intentá de nuevo.';
                         break;
                     }
-                    if (data && data.retryable === false) break;   // no insistir
-                } catch (e) { /* timeout o red: se reintenta */ }
+                    if (data && data.retryable === false) break;
+                } catch (e) { /* timeout o red */ }
                 if (i < MAX_TRIES) await new Promise(r => setTimeout(r, 1200 * i));
             }
         } finally {
-            typing.remove();                        // siempre se limpia, pase lo que pase
+            typing.remove();
             addMessage(reply ?? getLocalResponse(text), 'received');
             busy = false; sendBtn.disabled = false;
             input.focus();
@@ -107,3 +154,5 @@
     input.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
     sendBtn.addEventListener('click', sendMessage);
 </script>
+</body>
+</html>
