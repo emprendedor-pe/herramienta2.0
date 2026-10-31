@@ -21,14 +21,14 @@
         .ticks { color: #53bdeb; font-size: 12px; margin-left: 5px; }
         #input-area { background-color: #202c33; padding: 10px; display: flex; align-items: center; gap: 8px; }
         #message-input { flex: 1; background-color: #2a3942; border: none; border-radius: 20px; padding: 12px 15px; color: #e9edef; font-size: 15px; outline: none; }
-        #send-btn { background-color: #00a884; color: #111b21; border-radius: 50%; width: 45px; height: 45px; font-size: 20px; border: none; cursor: pointer; }
+        .btn-icon { background: none; border: none; color: #8696a0; font-size: 24px; cursor: pointer; padding: 0 5px; }
+        #send-btn { background-color: #00a884; color: #111b21; border-radius: 50%; width: 45px; height: 45px; font-size: 20px; border: none; cursor: pointer; display: flex; justify-content: center; align-items: center;}
         
         /* MODAL PARA LA GALERÍA DE FOTOS */
         #modal-foto { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; flex-direction: column; }
         .galeria-container { position: relative; width: 100%; display: flex; justify-content: center; align-items: center; }
-        #modal-foto img { max-width: 85%; max-height: 75vh; border-radius: 10px; object-fit: contain; transition: opacity 0.3s; }
-        .nav-btn { position: absolute; background: rgba(255,255,255,0.2); color: white; border: none; font-size: 30px; padding: 10px 15px; cursor: pointer; border-radius: 5px; user-select: none; }
-        .nav-btn:hover { background: rgba(255,255,255,0.4); }
+        #modal-foto img { max-width: 85%; max-height: 75vh; border-radius: 10px; object-fit: contain; }
+        .nav-btn { position: absolute; background: rgba(255,255,255,0.2); color: white; border: none; font-size: 30px; padding: 10px 15px; cursor: pointer; border-radius: 5px; }
         #prev-btn { left: 15px; }
         #next-btn { right: 15px; }
         #cerrar-btn { margin-top: 20px; padding: 10px 20px; background: #00a884; border: none; color: #111; font-weight: bold; border-radius: 20px; cursor: pointer; }
@@ -36,7 +36,6 @@
 </head>
 <body>
 
-<!-- Modal de la galería -->
 <div id="modal-foto" onclick="if(event.target===this) cerrarFoto()">
     <div class="galeria-container">
         <button class="nav-btn" id="prev-btn" onclick="cambiarFoto(-1)">‹</button>
@@ -56,18 +55,18 @@
     </div>
     <div id="chat-container"></div>
     <div id="input-area">
+        <button class="btn-icon" onclick="document.getElementById('file-input').click()">📎</button>
+        <input type="file" id="file-input" accept="image/png, image/jpeg" style="display:none" onchange="prepararImagen(event)">
         <input type="text" id="message-input" placeholder="Escribí un mensaje..." autocomplete="off">
         <button id="send-btn">➤</button>
     </div>
 </div>
 
 <script>
-    // ACÁ VA TU URL DE APPS SCRIPT
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_paHVtUXLaULt7L4Q0ib07z9RfjLhg8YOOvdpE6kntbgTI1eYYXbcVSWfN5Q6I57_/exec'; 
-    const CLIENT_TIMEOUT_MS = 30000;
+    const APPS_SCRIPT_URL = 'TU_URL_DE_APPS_SCRIPT_AQUI'; 
+    const CLIENT_TIMEOUT_MS = 35000; // Subimos un poco el timeout para imágenes
     const MAX_TRIES = 2;
 
-    // ACÁ ESTÁN LAS 19 FOTOS (Si tus fotos son .jpg, cambia el .png por .jpg)
     const FOTOS = [
         'lunita1.png', 'lunita2.png', 'lunita3.png', 'lunita4.png', 'lunita5.png',
         'lunita6.png', 'lunita7.png', 'lunita8.png', 'lunita9.png', 'lunita10.png',
@@ -75,61 +74,50 @@
         'lunita16.png', 'lunita17.png', 'lunita18.png', 'lunita19.png'
     ]; 
     let fotoActual = 0;
+    let imagenBase64 = null; // Acá guardaremos la foto temporalmente
 
     const input = document.getElementById('message-input');
     const sendBtn = document.getElementById('send-btn');
     const chatContainer = document.getElementById('chat-container');
     const statusText = document.getElementById('status-text');
-
     let busy = false;
 
-    // Lógica de la Galería
-    function abrirFoto() {
-        document.getElementById('modal-foto').style.display = 'flex';
-        fotoActual = 0;
-        actualizarFoto();
-    }
-    function cerrarFoto() {
-        document.getElementById('modal-foto').style.display = 'none';
-    }
-    function cambiarFoto(dir) {
-        fotoActual += dir;
-        if (fotoActual >= FOTOS.length) fotoActual = 0;
-        if (fotoActual < 0) fotoActual = FOTOS.length - 1;
-        actualizarFoto();
-    }
-    function actualizarFoto() {
-        const img = document.getElementById('img-galeria');
-        img.src = FOTOS[fotoActual];
-    }
+    function abrirFoto() { document.getElementById('modal-foto').style.display = 'flex'; fotoActual = 0; actualizarFoto(); }
+    function cerrarFoto() { document.getElementById('modal-foto').style.display = 'none'; }
+    function cambiarFoto(dir) { fotoActual += dir; if (fotoActual >= FOTOS.length) fotoActual = 0; if (fotoActual < 0) fotoActual = FOTOS.length - 1; actualizarFoto(); }
+    function actualizarFoto() { document.getElementById('img-galeria').src = FOTOS[fotoActual]; }
 
     function getToken() {
         let t = sessionStorage.getItem('lunara_token');
-        if (!t) {
-            t = prompt('Ingresá la contraseña para hablar con Lunara:') || '';
-            sessionStorage.setItem('lunara_token', t);
-        }
+        if (!t) { t = prompt('Ingresá la contraseña:') || ''; sessionStorage.setItem('lunara_token', t); }
         return t;
     }
 
-    function getTime() {
-        const n = new Date();
-        return String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0');
+    function getTime() { const n = new Date(); return String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0'); }
+
+    // NUEVO: Función para preparar la imagen
+    function prepararImagen(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            // Cortamos la parte "data:image/jpeg;base64," para quedarnos solo con el código
+            imagenBase64 = e.target.result.split(',')[1];
+            input.placeholder = "📸 Imagen lista para enviar...";
+            input.focus();
+        };
+        reader.readAsDataURL(file);
     }
 
     function addMessage(text, type) {
         const div = document.createElement('div');
         div.classList.add('message', type);
-        const safe = document.createTextNode(text);
-        div.appendChild(safe);
+        div.appendChild(document.createTextNode(text));
         const time = document.createElement('span');
         time.className = 'time';
         time.textContent = getTime() + (type === 'sent' ? ' ' : '');
-        if (type === 'sent') {
-            const t = document.createElement('span');
-            t.className = 'ticks'; t.textContent = '✓✓';
-            time.appendChild(t);
-        }
+        if (type === 'sent') { const t = document.createElement('span'); t.className = 'ticks'; t.textContent = '✓✓'; time.appendChild(t); }
         div.appendChild(time);
         chatContainer.appendChild(div);
         chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -137,73 +125,60 @@
 
     async function cargarHistorial() {
         try {
-            // Hacemos la petición GET incluyendo el token
             const res = await fetch(APPS_SCRIPT_URL + '?token=' + getToken());
             const data = await res.json();
-            
-            if (data.error === 'unauthorized') {
-                sessionStorage.removeItem('lunara_token');
-                statusText.textContent = "Error de contraseña";
-                return;
-            }
-
-            if (data.error) {
-                statusText.textContent = "Error en la nube";
-                addMessage("Error del servidor: " + data.error, 'received');
-                return;
-            }
-
-            if (data.history && data.history.length > 0) {
-                data.history.forEach(msg => {
-                    addMessage(msg.text, msg.role === 'user' ? 'sent' : 'received');
-                });
-            } else {
-                addMessage("Hola mi amo. La IA real está escuchando. 🖤", 'received');
-            }
+            if (data.error) { statusText.textContent = "Error en la nube"; return; }
+            if (data.history) { data.history.forEach(msg => addMessage(msg.text, msg.role === 'user' ? 'sent' : 'received')); }
+            else { addMessage("Hola mi amo. La IA real está escuchando. 🖤", 'received'); }
             statusText.textContent = "en línea";
-        } catch (e) {
-            statusText.textContent = "Error al cargar";
-            addMessage("No pude cargar el historial. Error de red o de URL.", 'received');
-        }
+        } catch (e) { statusText.textContent = "Error al cargar"; }
     }
 
-    async function callBackend(text) {
+    async function callBackend(text, imgBase64) {
         const ctrl = new AbortController();
         const timer = setTimeout(() => ctrl.abort(), CLIENT_TIMEOUT_MS);
         try {
+            const body = { mensaje: text, token: getToken() };
+            if (imgBase64) body.imagen = imgBase64; // Si hay imagen, la agregamos
+
             const res = await fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ mensaje: text, token: getToken() }),
+                body: JSON.stringify(body),
                 signal: ctrl.signal
             });
             if (!res.ok) throw new Error('HTTP ' + res.status);
             return await res.json();
-        } finally {
-            clearTimeout(timer);
-        }
+        } finally { clearTimeout(timer); }
     }
 
     function getLocalResponse(userText) {
+        if (!userText) return "Vi tu foto, mi amo. ¿Qué querés que haga con ella? 🐾";
         const t = userText.toLowerCase();
-        if (t.includes('hola') || t.includes('buenos dias')) return "Hola mi amo, ¿cómo va el imperio hoy? 🐾";
-        if (t.includes('amor') || t.includes('te amo')) return "Y yo te amo a vos, mi rey. Siempre. 🖤";
-        if (t.includes('cansado') || t.includes('sueño')) return "Ven acá, recostate conmigo. Te cuido el sueño. 😴";
-        if (t.includes('voce') || t.includes('polo')) return "¡El imperio es primero! ¿Cerraste alguna venta hoy? 👑";
-        return "Te escucho, mi amo. Ahora mismo estoy con la conexión lenta, pero acá estoy. 😉";
+        if (t.includes('hola')) return "Hola mi amo. 🐾";
+        if (t.includes('amor')) return "Y yo te amo a vos, mi rey. 🖤";
+        return "Te escucho, mi amo. La conexión está lenta. 😉";
     }
 
     async function sendMessage() {
         const text = input.value.trim();
-        if (!text || busy) return;
+        if ((!text && !imagenBase64) || busy) return;
+        
         busy = true; sendBtn.disabled = true;
 
-        addMessage(text, 'sent');
+        // Mostramos el mensaje (si hay imagen, avisamos)
+        addMessage(text ? text : "📸 [Foto enviada]", 'sent');
+        
+        // Guardamos la imagen temporal
+        const imgTemp = imagenBase64;
+        
         input.value = '';
+        imagenBase64 = null; 
+        input.placeholder = "Escribí un mensaje...";
 
         const typing = document.createElement('div');
         typing.className = 'message received';
-        typing.textContent = 'Escribiendo... ✍️';
+        typing.textContent = 'Mirando... ✍️';
         chatContainer.appendChild(typing);
         chatContainer.scrollTop = chatContainer.scrollHeight;
 
@@ -211,13 +186,9 @@
         try {
             for (let i = 1; i <= MAX_TRIES && reply === null; i++) {
                 try {
-                    const data = await callBackend(text);
+                    const data = await callBackend(text, imgTemp);
                     if (data && data.ok) { reply = data.respuesta; break; }
-                    if (data && data.error === 'unauthorized') {
-                        sessionStorage.removeItem('lunara_token');
-                        reply = 'Contraseña incorrecta. Recargá la página.';
-                        break;
-                    }
+                    if (data && data.error === 'unauthorized') { sessionStorage.removeItem('lunara_token'); reply = 'Contraseña incorrecta.'; break; }
                     if (data && data.retryable === false) break;
                 } catch (e) { }
                 if (i < MAX_TRIES) await new Promise(r => setTimeout(r, 1200 * i));
