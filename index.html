@@ -63,8 +63,9 @@
 </div>
 
 <script>
+        // ACÁ VA TU URL DE APPS SCRIPT
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_paHVtUXLaULt7L4Q0ib07z9RfjLhg8YOOvdpE6kntbgTI1eYYXbcVSWfN5Q6I57_/exec'; 
-    const CLIENT_TIMEOUT_MS = 35000; // Subimos un poco el timeout para imágenes
+    const CLIENT_TIMEOUT_MS = 45000; // Aumentamos a 45s para que procese fotos
     const MAX_TRIES = 2;
 
     const FOTOS = [
@@ -74,7 +75,7 @@
         'lunita16.png', 'lunita17.png', 'lunita18.png', 'lunita19.png'
     ]; 
     let fotoActual = 0;
-    let imagenBase64 = null; // Acá guardaremos la foto temporalmente
+    let imagenBase64 = null;
 
     const input = document.getElementById('message-input');
     const sendBtn = document.getElementById('send-btn');
@@ -95,14 +96,12 @@
 
     function getTime() { const n = new Date(); return String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0'); }
 
-    // NUEVO: Función para preparar la imagen
     function prepararImagen(event) {
         const file = event.target.files[0];
         if (!file) return;
         
         const reader = new FileReader();
         reader.onload = function(e) {
-            // Cortamos la parte "data:image/jpeg;base64," para quedarnos solo con el código
             imagenBase64 = e.target.result.split(',')[1];
             input.placeholder = "📸 Imagen lista para enviar...";
             input.focus();
@@ -110,10 +109,27 @@
         reader.readAsDataURL(file);
     }
 
-    function addMessage(text, type) {
+    // NUEVA FUNCIÓN MEJORADA: Ahora acepta mostrar la foto en el chat
+    function addMessage(text, type, imgBase64 = null) {
         const div = document.createElement('div');
         div.classList.add('message', type);
-        div.appendChild(document.createTextNode(text));
+        
+        // Si hay foto, la mostramos primero
+        if (imgBase64) {
+            const img = document.createElement('img');
+            img.src = 'data:image/jpeg;base64,' + imgBase64;
+            img.style.maxWidth = '100%';
+            img.style.borderRadius = '8px';
+            img.style.marginBottom = text ? '8px' : '0';
+            img.style.display = 'block';
+            div.appendChild(img);
+        }
+        
+        // Si hay texto, lo mostramos debajo de la foto
+        if (text) {
+            div.appendChild(document.createTextNode(text));
+        }
+
         const time = document.createElement('span');
         time.className = 'time';
         time.textContent = getTime() + (type === 'sent' ? ' ' : '');
@@ -139,7 +155,7 @@
         const timer = setTimeout(() => ctrl.abort(), CLIENT_TIMEOUT_MS);
         try {
             const body = { mensaje: text, token: getToken() };
-            if (imgBase64) body.imagen = imgBase64; // Si hay imagen, la agregamos
+            if (imgBase64) body.imagen = imgBase64;
 
             const res = await fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
@@ -153,11 +169,11 @@
     }
 
     function getLocalResponse(userText) {
-        if (!userText) return "Vi tu foto, mi amo. ¿Qué querés que haga con ella? 🐾";
+        if (!userText) return "Vi tu foto, mi amo. Me encantó. 🐾";
         const t = userText.toLowerCase();
         if (t.includes('hola')) return "Hola mi amo. 🐾";
         if (t.includes('amor')) return "Y yo te amo a vos, mi rey. 🖤";
-        return "Te escucho, mi amo. La conexión está lenta. 😉";
+        return "Te escucho, mi amo. La conexión está un poco saturada, pero te leo. 😉";
     }
 
     async function sendMessage() {
@@ -166,11 +182,11 @@
         
         busy = true; sendBtn.disabled = true;
 
-        // Mostramos el mensaje (si hay imagen, avisamos)
-        addMessage(text ? text : "📸 [Foto enviada]", 'sent');
-        
-        // Guardamos la imagen temporal
+        // Guardamos la imagen para mostrarla en el chat y para enviarla
         const imgTemp = imagenBase64;
+        
+        // Mostramos el mensaje en el chat (si hay imagen, la pinta)
+        addMessage(text, 'sent', imgTemp);
         
         input.value = '';
         imagenBase64 = null; 
@@ -178,7 +194,7 @@
 
         const typing = document.createElement('div');
         typing.className = 'message received';
-        typing.textContent = 'Mirando... ✍️';
+        typing.textContent = 'Mirando la foto... ✍️';
         chatContainer.appendChild(typing);
         chatContainer.scrollTop = chatContainer.scrollHeight;
 
@@ -204,6 +220,3 @@
     input.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
     sendBtn.addEventListener('click', sendMessage);
     window.onload = () => { cargarHistorial(); };
-</script>
-</body>
-</html>
