@@ -100,11 +100,7 @@
     }
     function actualizarFoto() {
         const img = document.getElementById('img-galeria');
-        img.style.opacity = 0;
-        setTimeout(() => {
-            img.src = FOTOS[fotoActual];
-            img.style.opacity = 1;
-        }, 150);
+        img.src = FOTOS[fotoActual];
     }
 
     function getToken() {
