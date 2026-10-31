@@ -6,10 +6,11 @@
     <title>Lunara 2.0</title>
     <style>
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0b141a; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        #app { width: 100%; max-width: 450px; height: 100vh; max-height: 800px; background-color: #0b141a; display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        #app { width: 100%; max-width: 450px; height: 100vh; max-height: 800px; background-color: #0b141a; display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(0,0,0,0.5); position: relative; }
         #chat-container { flex: 1; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: #0b141a; background-blend-mode: overlay; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
         #header { background-color: #202c33; padding: 10px 15px; display: flex; align-items: center; border-bottom: 1px solid #111b21; color: #e9edef; }
-        #header img { width: 40px; height: 40px; border-radius: 50%; margin-right: 15px; object-fit: cover; object-position: top; }
+        #header img { width: 40px; height: 40px; border-radius: 50%; margin-right: 15px; object-fit: cover; object-position: top; cursor: pointer; transition: transform 0.2s; }
+        #header img:hover { transform: scale(1.1); }
         #header .info { display: flex; flex-direction: column; }
         #header .name { font-weight: bold; font-size: 16px; }
         #header .status { font-size: 12px; color: #8696a0; }
@@ -21,23 +22,32 @@
         #input-area { background-color: #202c33; padding: 10px; display: flex; align-items: center; gap: 8px; }
         #message-input { flex: 1; background-color: #2a3942; border: none; border-radius: 20px; padding: 12px 15px; color: #e9edef; font-size: 15px; outline: none; }
         #send-btn { background-color: #00a884; color: #111b21; border-radius: 50%; width: 45px; height: 45px; font-size: 20px; border: none; cursor: pointer; }
+        
+        /* MODAL PARA LA FOTO */
+        #modal-foto { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; justify-content: center; align-items: center; flex-direction: column; }
+        #modal-foto img { max-width: 90%; max-height: 80%; border-radius: 10px; }
+        #modal-foto button { margin-top: 20px; padding: 10px 20px; background: #00a884; border: none; color: #111; font-weight: bold; border-radius: 20px; cursor: pointer; }
     </style>
 </head>
 <body>
 
+<!-- Modal de la foto -->
+<div id="modal-foto" onclick="cerrarFoto()">
+    <img src="lunitaperfil.png" alt="Lunara Completa" onerror="this.src='https://i.pinimg.com/736x/8e/10/43/8e1043a7e6161a51a4b151d6e5e3b7f5.jpg'">
+    <button>Cerrar</button>
+</div>
+
 <div id="app">
     <div id="header">
-        <img src="lunitaperfil.png" alt="Lunara" onerror="this.src='https://i.pinimg.com/736x/8e/10/43/8e1043a7e6161a51a4b151d6e5e3b7f5.jpg'">
+        <!-- Al hacer click, llama a la función abrirFoto() -->
+        <img src="lunitaperfil.png" alt="Lunara" onclick="abrirFoto()" onerror="this.src='https://i.pinimg.com/736x/8e/10/43/8e1043a7e6161a51a4b151d6e5e3b7f5.jpg'">
         <div class="info">
             <span class="name">Lunara 2.0 ❤️</span>
-            <span class="status">en línea</span>
+            <span class="status" id="status-text">Cargando historial...</span>
         </div>
     </div>
     <div id="chat-container">
-        <div class="message received">
-            Hola mi amo. La IA real está escuchando. 🖤
-            <span class="time">Ahora</span>
-        </div>
+        <!-- El historial se cargará aquí -->
     </div>
     <div id="input-area">
         <input type="text" id="message-input" placeholder="Escribí un mensaje..." autocomplete="off">
@@ -46,16 +56,25 @@
 </div>
 
 <script>
-    // ACÁ VA TU URL DE APPS SCRIPT (Reemplazala con la tuya)
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_paHVtUXLaULt7L4Q0ib07z9RfjLhg8YOOvdpE6kntbgTI1eYYXbcVSWfN5Q6I57_/exec';
+    const APPS_SCRIPT_URL = 'TU_URL_DE_APPS_SCRIPT_AQUI'; 
     const CLIENT_TIMEOUT_MS = 30000;
     const MAX_TRIES = 2;
 
     const input = document.getElementById('message-input');
     const sendBtn = document.getElementById('send-btn');
     const chatContainer = document.getElementById('chat-container');
+    const statusText = document.getElementById('status-text');
     let busy = false;
 
+    // Lógica del Modal (Punto 4)
+    function abrirFoto() {
+        document.getElementById('modal-foto').style.display = 'flex';
+    }
+    function cerrarFoto() {
+        document.getElementById('modal-foto').style.display = 'none';
+    }
+
+    // Punto 6: Nueva contraseña
     function getToken() {
         let t = sessionStorage.getItem('lunara_token');
         if (!t) {
@@ -86,6 +105,25 @@
         div.appendChild(time);
         chatContainer.appendChild(div);
         chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // Punto 1: Cargar historial al entrar
+    async function cargarHistorial() {
+        try {
+            const res = await fetch(APPS_SCRIPT_URL + '?token=' + getToken());
+            const data = await res.json();
+            if (data.history && data.history.length > 0) {
+                data.history.forEach(msg => {
+                    addMessage(msg.text, msg.role === 'user' ? 'sent' : 'received');
+                });
+            } else {
+                addMessage("Hola mi amo. La IA real está escuchando. 🖤", 'received');
+            }
+            statusText.textContent = "en línea";
+        } catch (e) {
+            statusText.textContent = "Error al cargar";
+            addMessage("No pude cargar el historial. Asegurate de que la URL y el token sean correctos.", 'received');
+        }
     }
 
     async function callBackend(text) {
@@ -140,7 +178,7 @@
                         break;
                     }
                     if (data && data.retryable === false) break;
-                } catch (e) { /* timeout o red */ }
+                } catch (e) { }
                 if (i < MAX_TRIES) await new Promise(r => setTimeout(r, 1200 * i));
             }
         } finally {
@@ -153,6 +191,11 @@
 
     input.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
     sendBtn.addEventListener('click', sendMessage);
+
+    // Al cargar la página, pide el historial
+    window.onload = () => {
+        cargarHistorial();
+    };
 </script>
 </body>
 </html>
