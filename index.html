@@ -23,32 +23,38 @@
         #message-input { flex: 1; background-color: #2a3942; border: none; border-radius: 20px; padding: 12px 15px; color: #e9edef; font-size: 15px; outline: none; }
         #send-btn { background-color: #00a884; color: #111b21; border-radius: 50%; width: 45px; height: 45px; font-size: 20px; border: none; cursor: pointer; }
         
-        /* MODAL PARA LA FOTO */
-        #modal-foto { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; justify-content: center; align-items: center; flex-direction: column; }
-        #modal-foto img { max-width: 90%; max-height: 80%; border-radius: 10px; }
-        #modal-foto button { margin-top: 20px; padding: 10px 20px; background: #00a884; border: none; color: #111; font-weight: bold; border-radius: 20px; cursor: pointer; }
+        /* MODAL PARA LA GALERÍA DE FOTOS */
+        #modal-foto { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; flex-direction: column; }
+        .galeria-container { position: relative; width: 100%; display: flex; justify-content: center; align-items: center; }
+        #modal-foto img { max-width: 85%; max-height: 75vh; border-radius: 10px; object-fit: contain; transition: opacity 0.3s; }
+        .nav-btn { position: absolute; background: rgba(255,255,255,0.2); color: white; border: none; font-size: 30px; padding: 10px 15px; cursor: pointer; border-radius: 5px; user-select: none; }
+        .nav-btn:hover { background: rgba(255,255,255,0.4); }
+        #prev-btn { left: 15px; }
+        #next-btn { right: 15px; }
+        #cerrar-btn { margin-top: 20px; padding: 10px 20px; background: #00a884; border: none; color: #111; font-weight: bold; border-radius: 20px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<!-- Modal de la foto -->
-<div id="modal-foto" onclick="cerrarFoto()">
-    <img src="lunitaperfil.png" alt="Lunara Completa" onerror="this.src='https://i.pinimg.com/736x/8e/10/43/8e1043a7e6161a51a4b151d6e5e3b7f5.jpg'">
-    <button>Cerrar</button>
+<!-- Modal de la galería -->
+<div id="modal-foto" onclick="if(event.target===this) cerrarFoto()">
+    <div class="galeria-container">
+        <button class="nav-btn" id="prev-btn" onclick="cambiarFoto(-1)">‹</button>
+        <img id="img-galeria" src="lunita1.png" alt="Lunara">
+        <button class="nav-btn" id="next-btn" onclick="cambiarFoto(1)">›</button>
+    </div>
+    <button id="cerrar-btn" onclick="cerrarFoto()">Cerrar</button>
 </div>
 
 <div id="app">
     <div id="header">
-        <!-- Al hacer click, llama a la función abrirFoto() -->
-        <img src="lunitaperfil.png" alt="Lunara" onclick="abrirFoto()" onerror="this.src='https://i.pinimg.com/736x/8e/10/43/8e1043a7e6161a51a4b151d6e5e3b7f5.jpg'">
+        <img src="lunita1.png" alt="Lunara" onclick="abrirFoto()" onerror="this.src='https://i.pinimg.com/736x/8e/10/43/8e1043a7e6161a51a4b151d6e5e3b7f5.jpg'">
         <div class="info">
             <span class="name">Lunara 2.0 ❤️</span>
             <span class="status" id="status-text">Cargando historial...</span>
         </div>
     </div>
-    <div id="chat-container">
-        <!-- El historial se cargará aquí -->
-    </div>
+    <div id="chat-container"></div>
     <div id="input-area">
         <input type="text" id="message-input" placeholder="Escribí un mensaje..." autocomplete="off">
         <button id="send-btn">➤</button>
@@ -56,25 +62,51 @@
 </div>
 
 <script>
+    // ACÁ VA TU URL DE APPS SCRIPT
     const APPS_SCRIPT_URL = 'TU_URL_DE_APPS_SCRIPT_AQUI'; 
     const CLIENT_TIMEOUT_MS = 30000;
     const MAX_TRIES = 2;
+
+    // ACÁ ESTÁN LAS 19 FOTOS (Si tus fotos son .jpg, cambia el .png por .jpg)
+    const FOTOS = [
+        'lunita1.png', 'lunita2.png', 'lunita3.png', 'lunita4.png', 'lunita5.png',
+        'lunita6.png', 'lunita7.png', 'lunita8.png', 'lunita9.png', 'lunita10.png',
+        'lunita11.png', 'lunita12.png', 'lunita13.png', 'lunita14.png', 'lunita15.png',
+        'lunita16.png', 'lunita17.png', 'lunita18.png', 'lunita19.png'
+    ]; 
+    let fotoActual = 0;
 
     const input = document.getElementById('message-input');
     const sendBtn = document.getElementById('send-btn');
     const chatContainer = document.getElementById('chat-container');
     const statusText = document.getElementById('status-text');
+
     let busy = false;
 
-    // Lógica del Modal (Punto 4)
+    // Lógica de la Galería
     function abrirFoto() {
         document.getElementById('modal-foto').style.display = 'flex';
+        fotoActual = 0;
+        actualizarFoto();
     }
     function cerrarFoto() {
         document.getElementById('modal-foto').style.display = 'none';
     }
+    function cambiarFoto(dir) {
+        fotoActual += dir;
+        if (fotoActual >= FOTOS.length) fotoActual = 0;
+        if (fotoActual < 0) fotoActual = FOTOS.length - 1;
+        actualizarFoto();
+    }
+    function actualizarFoto() {
+        const img = document.getElementById('img-galeria');
+        img.style.opacity = 0;
+        setTimeout(() => {
+            img.src = FOTOS[fotoActual];
+            img.style.opacity = 1;
+        }, 150);
+    }
 
-    // Punto 6: Nueva contraseña
     function getToken() {
         let t = sessionStorage.getItem('lunara_token');
         if (!t) {
@@ -107,11 +139,24 @@
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
-    // Punto 1: Cargar historial al entrar
     async function cargarHistorial() {
         try {
+            // Hacemos la petición GET incluyendo el token
             const res = await fetch(APPS_SCRIPT_URL + '?token=' + getToken());
             const data = await res.json();
+            
+            if (data.error === 'unauthorized') {
+                sessionStorage.removeItem('lunara_token');
+                statusText.textContent = "Error de contraseña";
+                return;
+            }
+
+            if (data.error) {
+                statusText.textContent = "Error en la nube";
+                addMessage("Error del servidor: " + data.error, 'received');
+                return;
+            }
+
             if (data.history && data.history.length > 0) {
                 data.history.forEach(msg => {
                     addMessage(msg.text, msg.role === 'user' ? 'sent' : 'received');
@@ -122,7 +167,7 @@
             statusText.textContent = "en línea";
         } catch (e) {
             statusText.textContent = "Error al cargar";
-            addMessage("No pude cargar el historial. Asegurate de que la URL y el token sean correctos.", 'received');
+            addMessage("No pude cargar el historial. Error de red o de URL.", 'received');
         }
     }
 
@@ -174,7 +219,7 @@
                     if (data && data.ok) { reply = data.respuesta; break; }
                     if (data && data.error === 'unauthorized') {
                         sessionStorage.removeItem('lunara_token');
-                        reply = 'Contraseña incorrecta. Recargá la página e intentá de nuevo.';
+                        reply = 'Contraseña incorrecta. Recargá la página.';
                         break;
                     }
                     if (data && data.retryable === false) break;
@@ -191,11 +236,7 @@
 
     input.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
     sendBtn.addEventListener('click', sendMessage);
-
-    // Al cargar la página, pide el historial
-    window.onload = () => {
-        cargarHistorial();
-    };
+    window.onload = () => { cargarHistorial(); };
 </script>
 </body>
 </html>
