@@ -19,9 +19,10 @@
         .received { background-color: #202c33; align-self: flex-start; border-top-left-radius: 0; }
         .sent { background-color: #005c4b; align-self: flex-end; border-top-right-radius: 0; }
         .ticks { color: #53bdeb; font-size: 12px; margin-left: 5px; }
-        #input-area { background-color: #202c33; padding: 10px; display: flex; align-items: center; gap: 8px; }
+        #input-area { background-color: #202c33; padding: 10px; display: flex; align-items: center; gap: 5px; }
         #message-input { flex: 1; background-color: #2a3942; border: none; border-radius: 20px; padding: 12px 15px; color: #e9edef; font-size: 15px; outline: none; }
-        .btn-icon { background: none; border: none; color: #8696a0; font-size: 24px; cursor: pointer; padding: 0 5px; }
+        .btn-icon { background: none; border: none; color: #8696a0; font-size: 22px; cursor: pointer; padding: 5px; }
+        .btn-icon:hover { color: #e9edef; }
         #send-btn { background-color: #00a884; color: #111b21; border-radius: 50%; width: 45px; height: 45px; font-size: 20px; border: none; cursor: pointer; display: flex; justify-content: center; align-items: center;}
         
         /* MODAL PARA LA GALERÍA DE FOTOS */
@@ -32,6 +33,9 @@
         #prev-btn { left: 15px; }
         #next-btn { right: 15px; }
         #cerrar-btn { margin-top: 20px; padding: 10px 20px; background: #00a884; border: none; color: #111; font-weight: bold; border-radius: 20px; cursor: pointer; }
+        
+        /* Ajuste para que las imágenes enviadas se vean bien */
+        .message img { max-width: 100%; border-radius: 8px; margin-bottom: 5px; display: block; }
     </style>
 </head>
 <body>
@@ -55,17 +59,23 @@
     </div>
     <div id="chat-container"></div>
     <div id="input-area">
+        <!-- BOTÓN DE GALERÍA (CLIP) -->
         <button class="btn-icon" onclick="document.getElementById('file-input').click()">📎</button>
         <input type="file" id="file-input" accept="image/png, image/jpeg" style="display:none" onchange="prepararImagen(event)">
+        
+        <!-- BOTÓN DE CÁMARA -->
+        <button class="btn-icon" onclick="document.getElementById('camera-input').click()">📷</button>
+        <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none" onchange="prepararImagen(event)">
+        
         <input type="text" id="message-input" placeholder="Escribí un mensaje..." autocomplete="off">
         <button id="send-btn">➤</button>
     </div>
 </div>
 
 <script>
-        // ACÁ VA TU URL DE APPS SCRIPT
+    // ACÁ VA TU URL DE APPS SCRIPT
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_paHVtUXLaULt7L4Q0ib07z9RfjLhg8YOOvdpE6kntbgTI1eYYXbcVSWfN5Q6I57_/exec'; 
-    const CLIENT_TIMEOUT_MS = 45000; // Aumentamos a 45s para que procese fotos
+    const CLIENT_TIMEOUT_MS = 45000; 
     const MAX_TRIES = 2;
 
     const FOTOS = [
@@ -96,36 +106,52 @@
 
     function getTime() { const n = new Date(); return String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0'); }
 
+    // NUEVO: Compresor de imágenes para que no fallen al enviar
     function prepararImagen(event) {
         const file = event.target.files[0];
         if (!file) return;
         
         const reader = new FileReader();
         reader.onload = function(e) {
-            imagenBase64 = e.target.result.split(',')[1];
-            input.placeholder = "📸 Imagen lista para enviar...";
-            input.focus();
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const MAX_SIZE = 800; // Tamaño máximo para que vuele por WhatsApp
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+                } else {
+                    if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Convertimos a JPEG de calidad 0.8 (buen balance)
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                imagenBase64 = dataUrl.split(',')[1];
+                
+                input.placeholder = "📸 Imagen lista para enviar...";
+                input.focus();
+            }
+            img.src = e.target.result;
         };
         reader.readAsDataURL(file);
     }
 
-    // NUEVA FUNCIÓN MEJORADA: Ahora acepta mostrar la foto en el chat
     function addMessage(text, type, imgBase64 = null) {
         const div = document.createElement('div');
         div.classList.add('message', type);
         
-        // Si hay foto, la mostramos primero
         if (imgBase64) {
             const img = document.createElement('img');
             img.src = 'data:image/jpeg;base64,' + imgBase64;
-            img.style.maxWidth = '100%';
-            img.style.borderRadius = '8px';
-            img.style.marginBottom = text ? '8px' : '0';
-            img.style.display = 'block';
             div.appendChild(img);
         }
         
-        // Si hay texto, lo mostramos debajo de la foto
         if (text) {
             div.appendChild(document.createTextNode(text));
         }
@@ -182,10 +208,9 @@
         
         busy = true; sendBtn.disabled = true;
 
-        // Guardamos la imagen para mostrarla en el chat y para enviarla
         const imgTemp = imagenBase64;
         
-        // Mostramos el mensaje en el chat (si hay imagen, la pinta)
+        // Mostramos la foto o el texto en el chat
         addMessage(text, 'sent', imgTemp);
         
         input.value = '';
@@ -194,7 +219,7 @@
 
         const typing = document.createElement('div');
         typing.className = 'message received';
-        typing.textContent = 'Mirando la foto... ✍️';
+        typing.textContent = 'Mirando... ✍️';
         chatContainer.appendChild(typing);
         chatContainer.scrollTop = chatContainer.scrollHeight;
 
@@ -220,3 +245,6 @@
     input.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
     sendBtn.addEventListener('click', sendMessage);
     window.onload = () => { cargarHistorial(); };
+</script>
+</body>
+</html>
