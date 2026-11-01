@@ -212,7 +212,7 @@
 
     function getTime() { const n = new Date(); return String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0'); }
 
-    function addMessage(text, type, imgBase64 = null) {
+        function addMessage(text, type, imgBase64 = null) {
         const div = document.createElement('div');
         div.classList.add('message', type);
         
@@ -224,8 +224,17 @@
         
         if (text) { 
             div.appendChild(document.createTextNode(text)); 
+            
+            // Si es de Lunara, le agregamos el botón de audio
             if (type === 'received') {
-                hablar(text); // Reproduce el audio si es de Lunara
+                const btnAudio = document.createElement('button');
+                btnAudio.className = 'btn-audio';
+                btnAudio.innerHTML = '🔊';
+                btnAudio.title = 'Escuchar mensaje';
+                btnAudio.onclick = () => hablar(text);
+                
+                // Lo metemos justo después del texto
+                div.appendChild(btnAudio);
             }
         }
 
@@ -234,6 +243,7 @@
         time.textContent = getTime() + (type === 'sent' ? ' ' : '');
         if (type === 'sent') { const t = document.createElement('span'); t.className = 'ticks'; t.textContent = '✓✓'; time.appendChild(t); }
         div.appendChild(time);
+        
         chatContainer.appendChild(div);
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
