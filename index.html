@@ -131,21 +131,7 @@
     }
     window.speechSynthesis.onvoiceschanged = cargarVoces;
 
-    function hablar(texto) {
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel(); // Corta cualquier audio anterior
-            const utterance = new SpeechSynthesisUtterance(texto);
-            utterance.lang = 'es-ES'; 
-            utterance.pitch = 1.2; 
-            utterance.rate = 1.1; 
-            
-            // Intentar buscar una voz en español
-            const vozEspanol = vocesDisponibles.find(v => v.lang.includes('es'));
-            if (vozEspanol) utterance.voice = vozEspanol;
-
-            window.speechSynthesis.speak(utterance);
-        }
-    }
+       }
 
     // --- GALERÍA Y CÁMARA (Igual que antes) ---
     function abrirFoto() { document.getElementById('modal-foto').style.display = 'flex'; fotoActual = 0; actualizarFoto(); }
