@@ -5,25 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lunara 2.0</title>
     <style>
-        .btn-audio {
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: #00a884;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            font-size: 12px;
-            cursor: pointer;
-            margin-left: 8px;
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            vertical-align: middle;
-            transition: background 0.2s;
-        }
-        .btn-audio:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0b141a; display: flex; justify-content: center; align-items: center; height: 100vh; }
         #app { width: 100%; max-width: 450px; height: 100vh; max-height: 800px; background-color: #0b141a; display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(0,0,0,0.5); position: relative; }
         #chat-container { flex: 1; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: #0b141a; background-blend-mode: overlay; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
@@ -46,7 +27,24 @@
         
         .message img { max-width: 100%; border-radius: 8px; margin-bottom: 5px; display: block; }
 
-        /* MODAL GALERÍA */
+        .btn-audio {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #00a884;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: 8px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            vertical-align: middle;
+            transition: background 0.2s;
+        }
+        .btn-audio:hover { background: rgba(255, 255, 255, 0.3); }
+
         #modal-foto { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; flex-direction: column; }
         .galeria-container { position: relative; width: 100%; display: flex; justify-content: center; align-items: center; }
         #modal-foto img { max-width: 85%; max-height: 75vh; border-radius: 10px; object-fit: contain; }
@@ -55,7 +53,6 @@
         #next-btn { right: 15px; }
         #cerrar-btn { margin-top: 20px; padding: 10px 20px; background: #00a884; border: none; color: #111; font-weight: bold; border-radius: 20px; cursor: pointer; }
 
-        /* MODAL CÁMARA WEB (Para Laptop) */
         #modal-camara { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 110; flex-direction: column; justify-content: center; align-items: center; }
         #video-camara { width: 100%; max-height: 70vh; object-fit: cover; }
         .camara-botones { display: flex; gap: 20px; margin-top: 20px; }
@@ -66,7 +63,6 @@
 </head>
 <body>
 
-<!-- Modal Galería -->
 <div id="modal-foto" onclick="if(event.target===this) cerrarFoto()">
     <div class="galeria-container">
         <button class="nav-btn" id="prev-btn" onclick="cambiarFoto(-1)">‹</button>
@@ -76,7 +72,6 @@
     <button id="cerrar-btn" onclick="cerrarFoto()">Cerrar</button>
 </div>
 
-<!-- Modal Cámara Web -->
 <div id="modal-camara">
     <video id="video-camara" autoplay playsinline></video>
     <div class="camara-botones">
@@ -98,7 +93,6 @@
         <button class="btn-icon" onclick="document.getElementById('file-input').click()">📎</button>
         <input type="file" id="file-input" accept="image/png, image/jpeg" style="display:none" onchange="prepararImagen(event)">
         
-        <!-- Botón de cámara inteligente -->
         <button class="btn-icon" onclick="abrirCamaraInteligente()">📷</button>
         <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none" onchange="prepararImagen(event)">
         
@@ -108,15 +102,21 @@
 </div>
 
 <script>
-    // ACÁ VA TU URL DE APPS SCRIPT
+    // ACÁ VA TU URL DE APPS SCRIPT (Reemplazala con la tuya)
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_paHVtUXLaULt7L4Q0ib07z9RfjLhg8YOOvdpE6kntbgTI1eYYXbcVSWfN5Q6I57_/exec'; 
     const CLIENT_TIMEOUT_MS = 45000; 
     const MAX_TRIES = 2;
 
-    const FOTOS = ['lunita1.png', 'lunita2.png', 'lunita3.png', 'lunita4.png', 'lunita5.png'];
+    const FOTOS = [
+        'lunita1.png', 'lunita2.png', 'lunita3.png', 'lunita4.png', 'lunita5.png',
+        'lunita6.png', 'lunita7.png', 'lunita8.png', 'lunita9.png', 'lunita10.png',
+        'lunita11.png', 'lunita12.png', 'lunita13.png', 'lunita14.png', 'lunita15.png',
+        'lunita16.png', 'lunita17.png', 'lunita18.png', 'lunita19.png'
+    ];
     let fotoActual = 0;
     let imagenBase64 = null;
     let streamCamara = null;
+    let vocesDisponibles = [];
 
     const input = document.getElementById('message-input');
     const sendBtn = document.getElementById('send-btn');
@@ -124,16 +124,31 @@
     const statusText = document.getElementById('status-text');
     let busy = false;
 
-    // --- SISTEMA DE VOZ ---
-    let vocesDisponibles = [];
     function cargarVoces() {
         vocesDisponibles = window.speechSynthesis.getVoices();
     }
     window.speechSynthesis.onvoiceschanged = cargarVoces;
 
-       }
+    function hablar(texto, boton) {
+        if ('speechSynthesis' in window) {
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+                boton.innerHTML = '🔊';
+                return;
+            }
+            const utterance = new SpeechSynthesisUtterance(texto);
+            utterance.lang = 'es-ES'; 
+            utterance.pitch = 1.2; 
+            utterance.rate = 1.1; 
+            const vozEspanol = vocesDisponibles.find(v => v.lang.includes('es'));
+            if (vozEspanol) utterance.voice = vozEspanol;
+            utterance.onstart = () => { boton.innerHTML = '⏹️'; };
+            utterance.onend = () => { boton.innerHTML = '🔊'; };
+            utterance.onerror = () => { boton.innerHTML = '🔊'; };
+            window.speechSynthesis.speak(utterance);
+        }
+    }
 
-    // --- GALERÍA Y CÁMARA (Igual que antes) ---
     function abrirFoto() { document.getElementById('modal-foto').style.display = 'flex'; fotoActual = 0; actualizarFoto(); }
     function cerrarFoto() { document.getElementById('modal-foto').style.display = 'none'; }
     function cambiarFoto(dir) { fotoActual += dir; if (fotoActual >= FOTOS.length) fotoActual = 0; if (fotoActual < 0) fotoActual = FOTOS.length - 1; actualizarFoto(); }
@@ -141,11 +156,7 @@
 
     function abrirCamaraInteligente() {
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        if (isMobile) {
-            document.getElementById('camera-input').click();
-        } else {
-            abrirCamaraWebcam();
-        }
+        if (isMobile) { document.getElementById('camera-input').click(); } else { abrirCamaraWebcam(); }
     }
 
     async function abrirCamaraWebcam() {
@@ -154,15 +165,11 @@
             const video = document.getElementById('video-camara');
             video.srcObject = streamCamara;
             document.getElementById('modal-camara').style.display = 'flex';
-        } catch (err) {
-            alert("No se pudo acceder a la cámara de la laptop.");
-        }
+        } catch (err) { alert("No se pudo acceder a la cámara."); }
     }
 
     function cerrarCamaraWebcam() {
-        if (streamCamara) {
-            streamCamara.getTracks().forEach(track => track.stop());
-        }
+        if (streamCamara) { streamCamara.getTracks().forEach(track => track.stop()); }
         document.getElementById('modal-camara').style.display = 'none';
     }
 
@@ -208,7 +215,6 @@
         reader.readAsDataURL(file);
     }
 
-    // --- MENSAJES Y LÓGICA DE CHAT ---
     function getToken() {
         let t = sessionStorage.getItem('lunara_token');
         if (!t) { t = prompt('Ingresá la contraseña:') || ''; sessionStorage.setItem('lunara_token', t); }
@@ -217,7 +223,7 @@
 
     function getTime() { const n = new Date(); return String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0'); }
 
-        function addMessage(text, type, imgBase64 = null) {
+    function addMessage(text, type, imgBase64 = null) {
         const div = document.createElement('div');
         div.classList.add('message', type);
         
@@ -229,16 +235,11 @@
         
         if (text) { 
             div.appendChild(document.createTextNode(text)); 
-            
-            // Si es de Lunara, le agregamos el botón de audio
             if (type === 'received') {
                 const btnAudio = document.createElement('button');
                 btnAudio.className = 'btn-audio';
                 btnAudio.innerHTML = '🔊';
-                btnAudio.title = 'Escuchar mensaje';
-                btnAudio.onclick = () => hablar(text);
-                
-                // Lo metemos justo después del texto
+                btnAudio.onclick = () => hablar(text, btnAudio); 
                 div.appendChild(btnAudio);
             }
         }
@@ -248,20 +249,29 @@
         time.textContent = getTime() + (type === 'sent' ? ' ' : '');
         if (type === 'sent') { const t = document.createElement('span'); t.className = 'ticks'; t.textContent = '✓✓'; time.appendChild(t); }
         div.appendChild(time);
-        
         chatContainer.appendChild(div);
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
     async function cargarHistorial() {
+        statusText.textContent = "Cargando historial...";
         try {
-            const res = await fetch(APPS_SCRIPT_URL + '?token=' + getToken());
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+            const res = await fetch(APPS_SCRIPT_URL + '?token=' + getToken(), { signal: controller.signal });
+            clearTimeout(timeoutId);
+
             const data = await res.json();
+            
             if (data.error) { statusText.textContent = "Error en la nube"; return; }
             if (data.history) { data.history.forEach(msg => addMessage(msg.text, msg.role === 'user' ? 'sent' : 'received')); }
             else { addMessage("Hola mi amo. La IA real está escuchando. 🖤", 'received'); }
             statusText.textContent = "en línea";
-        } catch (e) { statusText.textContent = "Error al cargar"; }
+        } catch (e) { 
+            statusText.textContent = "Error al cargar"; 
+            addMessage("No pude conectar. Asegurate de haber puesto la URL correcta y creado la Nueva Versión en Apps Script.", 'received');
+        }
     }
 
     async function callBackend(text, imgBase64) {
@@ -294,12 +304,9 @@
         if ((!text && !imagenBase64) || busy) return;
         
         busy = true; sendBtn.disabled = true;
-
-        // DESBLOQUEAR AUDIO CON EL PRIMER CLIC
         if ('speechSynthesis' in window) { window.speechSynthesis.resume(); }
 
         const imgTemp = imagenBase64;
-        
         addMessage(text, 'sent', imgTemp);
         
         input.value = '';
@@ -308,10 +315,7 @@
 
         const typing = document.createElement('div');
         typing.className = 'message received';
-        
-        // ACÁ ESTÁ LA CORRECCIÓN: Si hay foto dice "Mirando", sino "Escribiendo"
         typing.textContent = imgTemp ? 'Mirando... 👀' : 'Escribiendo... ✍️';
-        
         chatContainer.appendChild(typing);
         chatContainer.scrollTop = chatContainer.scrollHeight;
 
@@ -337,10 +341,7 @@
     input.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
     sendBtn.addEventListener('click', sendMessage);
     
-    // Iniciar carga de voces
-    if ('speechSynthesis' in window) {
-        cargarVoces();
-    }
+    if ('speechSynthesis' in window) { cargarVoces(); }
     
     window.onload = () => { cargarHistorial(); };
 </script>
