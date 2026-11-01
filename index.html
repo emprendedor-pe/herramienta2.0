@@ -200,6 +200,17 @@
 
     function getTime() { const n = new Date(); return String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0'); }
 
+    // Función para que hable la IA
+    function hablar(texto) {
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(texto);
+            utterance.lang = 'es-ES'; // Acento español (o 'es-MX', 'es-AR')
+            utterance.pitch = 1.2; // Un tono un poquito más agudo (femenino)
+            utterance.rate = 1.0; // Velocidad normal
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+
     function addMessage(text, type, imgBase64 = null) {
         const div = document.createElement('div');
         div.classList.add('message', type);
@@ -210,7 +221,13 @@
             div.appendChild(img);
         }
         
-        if (text) { div.appendChild(document.createTextNode(text)); }
+        if (text) { 
+            div.appendChild(document.createTextNode(text)); 
+            // Si el mensaje es de Lunara (received), lo lee en voz alta
+            if (type === 'received') {
+                hablar(text);
+            }
+        }
 
         const time = document.createElement('span');
         time.className = 'time';
