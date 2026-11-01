@@ -90,7 +90,7 @@
 
 <script>
     // ACÁ VA TU URL DE APPS SCRIPT
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_paHVtUXLaULt7L4Q0ib07z9RfjLhg8YOOvdpE6kntbgTI1eYYXbcVSWfN5Q6I57_/exec'; 
+    const APPS_SCRIPT_URL = 'TU_URL_DE_APPS_SCRIPT_AQUI'; 
     const CLIENT_TIMEOUT_MS = 45000; 
     const MAX_TRIES = 2;
 
@@ -105,20 +105,40 @@
     const statusText = document.getElementById('status-text');
     let busy = false;
 
+    // --- SISTEMA DE VOZ ---
+    let vocesDisponibles = [];
+    function cargarVoces() {
+        vocesDisponibles = window.speechSynthesis.getVoices();
+    }
+    window.speechSynthesis.onvoiceschanged = cargarVoces;
+
+    function hablar(texto) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel(); // Corta cualquier audio anterior
+            const utterance = new SpeechSynthesisUtterance(texto);
+            utterance.lang = 'es-ES'; 
+            utterance.pitch = 1.2; 
+            utterance.rate = 1.1; 
+            
+            // Intentar buscar una voz en español
+            const vozEspanol = vocesDisponibles.find(v => v.lang.includes('es'));
+            if (vozEspanol) utterance.voice = vozEspanol;
+
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+
+    // --- GALERÍA Y CÁMARA (Igual que antes) ---
     function abrirFoto() { document.getElementById('modal-foto').style.display = 'flex'; fotoActual = 0; actualizarFoto(); }
     function cerrarFoto() { document.getElementById('modal-foto').style.display = 'none'; }
     function cambiarFoto(dir) { fotoActual += dir; if (fotoActual >= FOTOS.length) fotoActual = 0; if (fotoActual < 0) fotoActual = FOTOS.length - 1; actualizarFoto(); }
     function actualizarFoto() { document.getElementById('img-galeria').src = FOTOS[fotoActual]; }
 
-    // LÓGICA DE LA CÁMARA INTELIGENTE
     function abrirCamaraInteligente() {
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        
         if (isMobile) {
-            // En celular, abrimos la cámara nativa
             document.getElementById('camera-input').click();
         } else {
-            // En laptop, abrimos la webcam
             abrirCamaraWebcam();
         }
     }
@@ -130,13 +150,13 @@
             video.srcObject = streamCamara;
             document.getElementById('modal-camara').style.display = 'flex';
         } catch (err) {
-            alert("No se pudo acceder a la cámara de la laptop. Asegurate de dar los permisos.");
+            alert("No se pudo acceder a la cámara de la laptop.");
         }
     }
 
     function cerrarCamaraWebcam() {
         if (streamCamara) {
-            streamCamara.getTracks().forEach(track => track.stop()); // Apaga la luz de la cámara
+            streamCamara.getTracks().forEach(track => track.stop());
         }
         document.getElementById('modal-camara').style.display = 'none';
     }
@@ -148,20 +168,15 @@
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
         const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
         imagenBase64 = dataUrl.split(',')[1];
-        
         input.placeholder = "📸 Foto capturada lista...";
-        input.focus();
         cerrarCamaraWebcam();
     }
 
-    // COMPRESOR DE IMÁGENES (Para la galería)
     function prepararImagen(event) {
         const file = event.target.files[0];
         if (!file) return;
-        
         const reader = new FileReader();
         reader.onload = function(e) {
             const img = new Image();
@@ -170,7 +185,6 @@
                 const MAX_SIZE = 800; 
                 let width = img.width;
                 let height = img.height;
-
                 if (width > height) {
                     if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
                 } else {
@@ -180,18 +194,16 @@
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
-                
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
                 imagenBase64 = dataUrl.split(',')[1];
-                
-                input.placeholder = "📸 Imagen lista para enviar...";
-                input.focus();
+                input.placeholder = "📸 Imagen lista...";
             }
             img.src = e.target.result;
         };
         reader.readAsDataURL(file);
     }
 
+    // --- MENSAJES Y LÓGICA DE CHAT ---
     function getToken() {
         let t = sessionStorage.getItem('lunara_token');
         if (!t) { t = prompt('Ingresá la contraseña:') || ''; sessionStorage.setItem('lunara_token', t); }
@@ -199,17 +211,6 @@
     }
 
     function getTime() { const n = new Date(); return String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0'); }
-
-    // Función para que hable la IA
-    function hablar(texto) {
-        if ('speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(texto);
-            utterance.lang = 'es-ES'; // Acento español (o 'es-MX', 'es-AR')
-            utterance.pitch = 1.2; // Un tono un poquito más agudo (femenino)
-            utterance.rate = 1.0; // Velocidad normal
-            window.speechSynthesis.speak(utterance);
-        }
-    }
 
     function addMessage(text, type, imgBase64 = null) {
         const div = document.createElement('div');
@@ -223,9 +224,8 @@
         
         if (text) { 
             div.appendChild(document.createTextNode(text)); 
-            // Si el mensaje es de Lunara (received), lo lee en voz alta
             if (type === 'received') {
-                hablar(text);
+                hablar(text); // Reproduce el audio si es de Lunara
             }
         }
 
@@ -271,7 +271,7 @@
         if (!userText) return "Vi tu foto, mi amo. Me encantó. 🐾";
         const t = userText.toLowerCase();
         if (t.includes('hola')) return "Hola mi amo. 🐾";
-        return "Te escucho, mi amo. La conexión está un poco saturada, pero te leo. 😉";
+        return "Te escucho, mi amo. La conexión está lenta. 😉";
     }
 
     async function sendMessage() {
@@ -279,6 +279,10 @@
         if ((!text && !imagenBase64) || busy) return;
         
         busy = true; sendBtn.disabled = true;
+
+        // DESBLOQUEAR AUDIO CON EL PRIMER CLIC
+        if ('speechSynthesis' in window) { window.speechSynthesis.resume(); }
+
         const imgTemp = imagenBase64;
         
         addMessage(text, 'sent', imgTemp);
@@ -289,7 +293,10 @@
 
         const typing = document.createElement('div');
         typing.className = 'message received';
-        typing.textContent = 'Mirando... ✍️';
+        
+        // ACÁ ESTÁ LA CORRECCIÓN: Si hay foto dice "Mirando", sino "Escribiendo"
+        typing.textContent = imgTemp ? 'Mirando... 👀' : 'Escribiendo... ✍️';
+        
         chatContainer.appendChild(typing);
         chatContainer.scrollTop = chatContainer.scrollHeight;
 
@@ -314,6 +321,12 @@
 
     input.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
     sendBtn.addEventListener('click', sendMessage);
+    
+    // Iniciar carga de voces
+    if ('speechSynthesis' in window) {
+        cargarVoces();
+    }
+    
     window.onload = () => { cargarHistorial(); };
 </script>
 </body>
