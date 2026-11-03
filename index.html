@@ -196,8 +196,9 @@
             const res = await fetch(APPS_SCRIPT_URL + '?token=' + getToken(), { signal: controller.signal });
             clearTimeout(timeoutId);
             const data = await res.json();
-                        if (data.error) { 
-                statusText.textContent = "Error en la nube"; 
+      if (data.error) { 
+                statusText.textContent = "Error: " + data.error; 
+                addMessage("El servidor dice: " + data.error, 'received');
                 return; 
             }
             
