@@ -45,6 +45,13 @@
     </div>
     <button id="cerrar-btn" onclick="cerrarFoto()">Cerrar</button>
 </div>
+<div id="modal-camara">
+    <video id="video-camara" autoplay playsinline></video>
+    <div class="camara-botones">
+        <button id="btn-capturar" class="btn-camara" onclick="tomarFotoWebcam()">📸 Capturar</button>
+        <button id="btn-cerrar-cam" class="btn-camara" onclick="cerrarCamaraWebcam()">Cancelar</button>
+    </div>
+</div>
 <div id="app">
     <div id="header">
         <img src="lunita1.png" alt="Lunara" onclick="abrirFoto()" onerror="this.src='https://i.pinimg.com/736x/8e/10/43/8e1043a7e6161a51a4b151d6e5e3b7f5.jpg'">
