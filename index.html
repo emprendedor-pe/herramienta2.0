@@ -6,15 +6,8 @@
     <title>Lunara 2.0</title>
     <style>
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0b141a; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        
-        /* DISEÑO ADAPTATIVO: Celular vs PC */
         #app { width: 100%; max-width: 450px; height: 100vh; max-height: 800px; background-color: #0b141a; display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(0,0,0,0.5); position: relative; transition: max-width 0.3s ease; }
-        
-        /* En PC (pantallas grandes), que ocupe más espacio */
-        @media (min-width: 768px) {
-            #app { max-width: 800px; height: 90vh; border-radius: 15px; }
-        }
-
+        @media (min-width: 768px) { #app { max-width: 800px; height: 90vh; border-radius: 15px; } }
         #chat-container { flex: 1; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: #0b141a; background-blend-mode: overlay; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
         #header { background-color: #202c33; padding: 10px 15px; display: flex; align-items: center; border-bottom: 1px solid #111b21; color: #e9edef; border-top-left-radius: 15px; border-top-right-radius: 15px;}
         #header img { width: 40px; height: 40px; border-radius: 50%; margin-right: 15px; object-fit: cover; object-position: top; cursor: pointer; transition: transform 0.2s; }
@@ -32,30 +25,18 @@
         .btn-icon { background: none; border: none; color: #8696a0; font-size: 22px; cursor: pointer; padding: 5px; }
         .btn-icon:hover { color: #e9edef; }
         #send-btn { background-color: #00a884; color: #111b21; border-radius: 50%; width: 45px; height: 45px; font-size: 20px; border: none; cursor: pointer; display: flex; justify-content: center; align-items: center;}
-        
         .message img { max-width: 100%; border-radius: 8px; margin-bottom: 5px; display: block; }
-
         .btn-audio { background: rgba(255, 255, 255, 0.1); border: none; color: #00a884; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; cursor: pointer; margin-left: 8px; display: inline-flex; justify-content: center; align-items: center; vertical-align: middle; transition: background 0.2s; }
         .btn-audio:hover { background: rgba(255, 255, 255, 0.3); }
-
         #modal-foto { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; flex-direction: column; border-radius: 15px;}
         .galeria-container { position: relative; width: 100%; display: flex; justify-content: center; align-items: center; }
         #modal-foto img { max-width: 85%; max-height: 75vh; border-radius: 10px; object-fit: contain; }
         .nav-btn { position: absolute; background: rgba(255,255,255,0.2); color: white; border: none; font-size: 30px; padding: 10px 15px; cursor: pointer; border-radius: 5px; }
-        #prev-btn { left: 15px; }
-        #next-btn { right: 15px; }
+        #prev-btn { left: 15px; } #next-btn { right: 15px; }
         #cerrar-btn { margin-top: 20px; padding: 10px 20px; background: #00a884; border: none; color: #111; font-weight: bold; border-radius: 20px; cursor: pointer; }
-
-        #modal-camara { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 110; flex-direction: column; justify-content: center; align-items: center; border-radius: 15px;}
-        #video-camara { width: 100%; max-height: 70vh; object-fit: cover; }
-        .camara-botones { display: flex; gap: 20px; margin-top: 20px; }
-        .btn-camara { padding: 12px 20px; border-radius: 20px; font-weight: bold; border: none; cursor: pointer; font-size: 16px; }
-        #btn-capturar { background: #00a884; color: #111; }
-        #btn-cerrar-cam { background: #f44336; color: white; }
     </style>
 </head>
 <body>
-
 <div id="modal-foto" onclick="if(event.target===this) cerrarFoto()">
     <div class="galeria-container">
         <button class="nav-btn" id="prev-btn" onclick="cambiarFoto(-1)">‹</button>
@@ -64,15 +45,6 @@
     </div>
     <button id="cerrar-btn" onclick="cerrarFoto()">Cerrar</button>
 </div>
-
-<div id="modal-camara">
-    <video id="video-camara" autoplay playsinline></video>
-    <div class="camara-botones">
-        <button id="btn-capturar" class="btn-camara" onclick="tomarFotoWebcam()">📸 Capturar</button>
-        <button id="btn-cerrar-cam" class="btn-camara" onclick="cerrarCamaraWebcam()">Cancelar</button>
-    </div>
-</div>
-
 <div id="app">
     <div id="header">
         <img src="lunita1.png" alt="Lunara" onclick="abrirFoto()" onerror="this.src='https://i.pinimg.com/736x/8e/10/43/8e1043a7e6161a51a4b151d6e5e3b7f5.jpg'">
@@ -85,25 +57,17 @@
     <div id="input-area">
         <button class="btn-icon" onclick="document.getElementById('file-input').click()">📎</button>
         <input type="file" id="file-input" accept="image/png, image/jpeg" style="display:none" onchange="prepararImagen(event)">
-        
-        <button class="btn-icon" onclick="abrirCamaraInteligente()">📷</button>
-        <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none" onchange="prepararImagen(event)">
-        
         <input type="text" id="message-input" placeholder="Escribí un mensaje o pegá una captura..." autocomplete="off">
         <button id="send-btn">➤</button>
     </div>
 </div>
-
 <script>
-    // ACÁ VA TU URL DE APPS SCRIPT
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_paHVtUXLaULt7L4Q0ib07z9RfjLhg8YOOvdpE6kntbgTI1eYYXbcVSWfN5Q6I57_/exec'; 
     const CLIENT_TIMEOUT_MS = 45000; 
     const MAX_TRIES = 2;
-
     const FOTOS = ['lunita1.png', 'lunita2.png', 'lunita3.png', 'lunita4.png', 'lunita5.png'];
     let fotoActual = 0;
     let imagenBase64 = null;
-    let streamCamara = null;
     let vocesDisponibles = [];
 
     const input = document.getElementById('message-input');
@@ -117,9 +81,7 @@
 
     function hablar(texto, boton) {
         if ('speechSynthesis' in window) {
-            if (window.speechSynthesis.speaking) {
-                window.speechSynthesis.cancel(); boton.innerHTML = '🔊'; return;
-            }
+            if (window.speechSynthesis.speaking) { window.speechSynthesis.cancel(); boton.innerHTML = '🔊'; return; }
             const utterance = new SpeechSynthesisUtterance(texto);
             utterance.lang = 'es-ES'; utterance.pitch = 1.2; utterance.rate = 1.1; 
             const vozEspanol = vocesDisponibles.find(v => v.lang.includes('es'));
@@ -135,37 +97,6 @@
     function cerrarFoto() { document.getElementById('modal-foto').style.display = 'none'; }
     function cambiarFoto(dir) { fotoActual += dir; if (fotoActual >= FOTOS.length) fotoActual = 0; if (fotoActual < 0) fotoActual = FOTOS.length - 1; actualizarFoto(); }
     function actualizarFoto() { document.getElementById('img-galeria').src = FOTOS[fotoActual]; }
-
-    function abrirCamaraInteligente() {
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        if (isMobile) { document.getElementById('camera-input').click(); } else { abrirCamaraWebcam(); }
-    }
-
-    async function abrirCamaraWebcam() {
-        try {
-            streamCamara = await navigator.mediaDevices.getUserMedia({ video: true });
-            const video = document.getElementById('video-camara');
-            video.srcObject = streamCamara;
-            document.getElementById('modal-camara').style.display = 'flex';
-        } catch (err) { alert("No se pudo acceder a la cámara."); }
-    }
-
-    function cerrarCamaraWebcam() {
-        if (streamCamara) { streamCamara.getTracks().forEach(track => track.stop()); }
-        document.getElementById('modal-camara').style.display = 'none';
-    }
-
-    function tomarFotoWebcam() {
-        const video = document.getElementById('video-camara');
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        imagenBase64 = dataUrl.split(',')[1];
-        input.placeholder = "📸 Foto capturada lista...";
-        cerrarCamaraWebcam();
-    }
 
     function prepararImagen(event) {
         const file = event.target.files[0];
@@ -190,7 +121,6 @@
         reader.readAsDataURL(file);
     }
 
-    // --- NUEVO: PEGAR IMÁGENES CON CTRL+V ---
     window.addEventListener('paste', function(e) {
         const items = (e.clipboardData || e.originalEvent.clipboardData).items;
         for (let index in items) {
@@ -227,13 +157,15 @@
 
     function getTime() { const n = new Date(); return String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0'); }
 
-    function addMessage(text, type, imgBase64 = null) {
+    // NUEVA FUNCIÓN: Acepta links de Drive para el historial, o Base64 para el envío
+    function addMessage(text, type, imgData = null) {
         const div = document.createElement('div');
         div.classList.add('message', type);
         
-        if (imgBase64) {
+        if (imgData) {
             const img = document.createElement('img');
-            img.src = 'data:image/jpeg;base64,' + imgBase64;
+            // Si empieza con 'http', es un link de Drive. Si no, es Base64
+            img.src = imgData.startsWith('http') ? imgData : 'data:image/jpeg;base64,' + imgData; 
             div.appendChild(img);
         }
         
@@ -241,8 +173,7 @@
             div.appendChild(document.createTextNode(text)); 
             if (type === 'received') {
                 const btnAudio = document.createElement('button');
-                btnAudio.className = 'btn-audio';
-                btnAudio.innerHTML = '🔊';
+                btnAudio.className = 'btn-audio'; btnAudio.innerHTML = '🔊';
                 btnAudio.onclick = () => hablar(text, btnAudio); 
                 div.appendChild(btnAudio);
             }
@@ -266,12 +197,19 @@
             clearTimeout(timeoutId);
             const data = await res.json();
             if (data.error) { statusText.textContent = "Error en la nube"; return; }
-            if (data.history) { data.history.forEach(msg => addMessage(msg.text, msg.role === 'user' ? 'sent' : 'received')); }
-            else { addMessage("Hola mi amo. La IA real está escuchando. 🖤", 'received'); }
+            
+            if (data.history) { 
+                data.history.forEach(msg => {
+                    // Pasamos el link de la foto si existe
+                    addMessage(msg.text, msg.role === 'user' ? 'sent' : 'received', msg.imgUrl); 
+                });
+            } else { 
+                addMessage("Hola mi amo. La IA real está escuchando. 🖤", 'received'); 
+            }
             statusText.textContent = "en línea";
         } catch (e) { 
             statusText.textContent = "Error al cargar"; 
-            addMessage("No pude conectar. Asegurate de haber puesto la URL correcta y creado la Nueva Versión en Apps Script.", 'received');
+            addMessage("No pude conectar. Revisá la URL y los permisos.", 'received');
         }
     }
 
@@ -282,10 +220,8 @@
             const body = { mensaje: text, token: getToken() };
             if (imgBase64) body.imagen = imgBase64;
             const res = await fetch(APPS_SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(body),
-                signal: ctrl.signal
+                method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(body), signal: ctrl.signal
             });
             if (!res.ok) throw new Error('HTTP ' + res.status);
             return await res.json();
@@ -340,7 +276,6 @@
     sendBtn.addEventListener('click', sendMessage);
     
     if ('speechSynthesis' in window) { cargarVoces(); }
-    
     window.onload = () => { cargarHistorial(); };
 </script>
 </body>
