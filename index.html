@@ -54,9 +54,14 @@
         </div>
     </div>
     <div id="chat-container"></div>
-    <div id="input-area">
+        <div id="input-area">
         <button class="btn-icon" onclick="document.getElementById('file-input').click()">📎</button>
         <input type="file" id="file-input" accept="image/png, image/jpeg" style="display:none" onchange="prepararImagen(event)">
+        
+        <!-- AGREGÁ ESTAS DOS LÍNEAS ACÁ -->
+        <button class="btn-icon" onclick="abrirCamaraInteligente()">📷</button>
+        <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none" onchange="prepararImagen(event)">
+        
         <input type="text" id="message-input" placeholder="Escribí un mensaje o pegá una captura..." autocomplete="off">
         <button id="send-btn">➤</button>
     </div>
