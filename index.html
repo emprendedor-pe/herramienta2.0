@@ -6,9 +6,17 @@
     <title>Lunara 2.0</title>
     <style>
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0b141a; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        #app { width: 100%; max-width: 450px; height: 100vh; max-height: 800px; background-color: #0b141a; display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(0,0,0,0.5); position: relative; }
+        
+        /* DISEÑO ADAPTATIVO: Celular vs PC */
+        #app { width: 100%; max-width: 450px; height: 100vh; max-height: 800px; background-color: #0b141a; display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(0,0,0,0.5); position: relative; transition: max-width 0.3s ease; }
+        
+        /* En PC (pantallas grandes), que ocupe más espacio */
+        @media (min-width: 768px) {
+            #app { max-width: 800px; height: 90vh; border-radius: 15px; }
+        }
+
         #chat-container { flex: 1; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: #0b141a; background-blend-mode: overlay; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        #header { background-color: #202c33; padding: 10px 15px; display: flex; align-items: center; border-bottom: 1px solid #111b21; color: #e9edef; }
+        #header { background-color: #202c33; padding: 10px 15px; display: flex; align-items: center; border-bottom: 1px solid #111b21; color: #e9edef; border-top-left-radius: 15px; border-top-right-radius: 15px;}
         #header img { width: 40px; height: 40px; border-radius: 50%; margin-right: 15px; object-fit: cover; object-position: top; cursor: pointer; transition: transform 0.2s; }
         #header img:hover { transform: scale(1.1); }
         #header .info { display: flex; flex-direction: column; }
@@ -19,7 +27,7 @@
         .received { background-color: #202c33; align-self: flex-start; border-top-left-radius: 0; }
         .sent { background-color: #005c4b; align-self: flex-end; border-top-right-radius: 0; }
         .ticks { color: #53bdeb; font-size: 12px; margin-left: 5px; }
-        #input-area { background-color: #202c33; padding: 10px; display: flex; align-items: center; gap: 5px; }
+        #input-area { background-color: #202c33; padding: 10px; display: flex; align-items: center; gap: 5px; border-bottom-left-radius: 15px; border-bottom-right-radius: 15px;}
         #message-input { flex: 1; background-color: #2a3942; border: none; border-radius: 20px; padding: 12px 15px; color: #e9edef; font-size: 15px; outline: none; }
         .btn-icon { background: none; border: none; color: #8696a0; font-size: 22px; cursor: pointer; padding: 5px; }
         .btn-icon:hover { color: #e9edef; }
@@ -27,25 +35,10 @@
         
         .message img { max-width: 100%; border-radius: 8px; margin-bottom: 5px; display: block; }
 
-        .btn-audio {
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: #00a884;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            font-size: 12px;
-            cursor: pointer;
-            margin-left: 8px;
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            vertical-align: middle;
-            transition: background 0.2s;
-        }
+        .btn-audio { background: rgba(255, 255, 255, 0.1); border: none; color: #00a884; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; cursor: pointer; margin-left: 8px; display: inline-flex; justify-content: center; align-items: center; vertical-align: middle; transition: background 0.2s; }
         .btn-audio:hover { background: rgba(255, 255, 255, 0.3); }
 
-        #modal-foto { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; flex-direction: column; }
+        #modal-foto { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; flex-direction: column; border-radius: 15px;}
         .galeria-container { position: relative; width: 100%; display: flex; justify-content: center; align-items: center; }
         #modal-foto img { max-width: 85%; max-height: 75vh; border-radius: 10px; object-fit: contain; }
         .nav-btn { position: absolute; background: rgba(255,255,255,0.2); color: white; border: none; font-size: 30px; padding: 10px 15px; cursor: pointer; border-radius: 5px; }
@@ -53,7 +46,7 @@
         #next-btn { right: 15px; }
         #cerrar-btn { margin-top: 20px; padding: 10px 20px; background: #00a884; border: none; color: #111; font-weight: bold; border-radius: 20px; cursor: pointer; }
 
-        #modal-camara { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 110; flex-direction: column; justify-content: center; align-items: center; }
+        #modal-camara { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 110; flex-direction: column; justify-content: center; align-items: center; border-radius: 15px;}
         #video-camara { width: 100%; max-height: 70vh; object-fit: cover; }
         .camara-botones { display: flex; gap: 20px; margin-top: 20px; }
         .btn-camara { padding: 12px 20px; border-radius: 20px; font-weight: bold; border: none; cursor: pointer; font-size: 16px; }
@@ -96,23 +89,18 @@
         <button class="btn-icon" onclick="abrirCamaraInteligente()">📷</button>
         <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none" onchange="prepararImagen(event)">
         
-        <input type="text" id="message-input" placeholder="Escribí un mensaje..." autocomplete="off">
+        <input type="text" id="message-input" placeholder="Escribí un mensaje o pegá una captura..." autocomplete="off">
         <button id="send-btn">➤</button>
     </div>
 </div>
 
 <script>
-    // ACÁ VA TU URL DE APPS SCRIPT (Reemplazala con la tuya)
+    // ACÁ VA TU URL DE APPS SCRIPT
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_paHVtUXLaULt7L4Q0ib07z9RfjLhg8YOOvdpE6kntbgTI1eYYXbcVSWfN5Q6I57_/exec'; 
     const CLIENT_TIMEOUT_MS = 45000; 
     const MAX_TRIES = 2;
 
-    const FOTOS = [
-        'lunita1.png', 'lunita2.png', 'lunita3.png', 'lunita4.png', 'lunita5.png',
-        'lunita6.png', 'lunita7.png', 'lunita8.png', 'lunita9.png', 'lunita10.png',
-        'lunita11.png', 'lunita12.png', 'lunita13.png', 'lunita14.png', 'lunita15.png',
-        'lunita16.png', 'lunita17.png', 'lunita18.png', 'lunita19.png'
-    ];
+    const FOTOS = ['lunita1.png', 'lunita2.png', 'lunita3.png', 'lunita4.png', 'lunita5.png'];
     let fotoActual = 0;
     let imagenBase64 = null;
     let streamCamara = null;
@@ -124,22 +112,16 @@
     const statusText = document.getElementById('status-text');
     let busy = false;
 
-    function cargarVoces() {
-        vocesDisponibles = window.speechSynthesis.getVoices();
-    }
+    function cargarVoces() { vocesDisponibles = window.speechSynthesis.getVoices(); }
     window.speechSynthesis.onvoiceschanged = cargarVoces;
 
     function hablar(texto, boton) {
         if ('speechSynthesis' in window) {
             if (window.speechSynthesis.speaking) {
-                window.speechSynthesis.cancel();
-                boton.innerHTML = '🔊';
-                return;
+                window.speechSynthesis.cancel(); boton.innerHTML = '🔊'; return;
             }
             const utterance = new SpeechSynthesisUtterance(texto);
-            utterance.lang = 'es-ES'; 
-            utterance.pitch = 1.2; 
-            utterance.rate = 1.1; 
+            utterance.lang = 'es-ES'; utterance.pitch = 1.2; utterance.rate = 1.1; 
             const vozEspanol = vocesDisponibles.find(v => v.lang.includes('es'));
             if (vozEspanol) utterance.voice = vozEspanol;
             utterance.onstart = () => { boton.innerHTML = '⏹️'; };
@@ -176,8 +158,7 @@
     function tomarFotoWebcam() {
         const video = document.getElementById('video-camara');
         const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
@@ -194,16 +175,10 @@
             const img = new Image();
             img.onload = function() {
                 const canvas = document.createElement('canvas');
-                const MAX_SIZE = 800; 
-                let width = img.width;
-                let height = img.height;
-                if (width > height) {
-                    if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
-                } else {
-                    if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
-                }
-                canvas.width = width;
-                canvas.height = height;
+                const MAX_SIZE = 800; let width = img.width; let height = img.height;
+                if (width > height) { if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; } } 
+                else { if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; } }
+                canvas.width = width; canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
@@ -214,6 +189,35 @@
         };
         reader.readAsDataURL(file);
     }
+
+    // --- NUEVO: PEGAR IMÁGENES CON CTRL+V ---
+    window.addEventListener('paste', function(e) {
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (let index in items) {
+            const item = items[index];
+            if (item.kind === 'file' && item.type.includes('image/')) {
+                const blob = item.getAsFile();
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const MAX_SIZE = 800; let width = img.width; let height = img.height;
+                        if (width > height) { if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; } } 
+                        else { if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; } }
+                        canvas.width = width; canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                        imagenBase64 = dataUrl.split(',')[1];
+                        input.placeholder = "📸 Captura pegada lista...";
+                    }
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(blob);
+            }
+        }
+    });
 
     function getToken() {
         let t = sessionStorage.getItem('lunara_token');
@@ -258,12 +262,9 @@
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
-
             const res = await fetch(APPS_SCRIPT_URL + '?token=' + getToken(), { signal: controller.signal });
             clearTimeout(timeoutId);
-
             const data = await res.json();
-            
             if (data.error) { statusText.textContent = "Error en la nube"; return; }
             if (data.history) { data.history.forEach(msg => addMessage(msg.text, msg.role === 'user' ? 'sent' : 'received')); }
             else { addMessage("Hola mi amo. La IA real está escuchando. 🖤", 'received'); }
@@ -280,7 +281,6 @@
         try {
             const body = { mensaje: text, token: getToken() };
             if (imgBase64) body.imagen = imgBase64;
-
             const res = await fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -309,9 +309,7 @@
         const imgTemp = imagenBase64;
         addMessage(text, 'sent', imgTemp);
         
-        input.value = '';
-        imagenBase64 = null; 
-        input.placeholder = "Escribí un mensaje...";
+        input.value = ''; imagenBase64 = null; input.placeholder = "Escribí un mensaje o pegá una captura...";
 
         const typing = document.createElement('div');
         typing.className = 'message received';
