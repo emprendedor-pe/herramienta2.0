@@ -422,10 +422,10 @@
                 if (i < MAX_TRIES) await new Promise(r => setTimeout(r, 1200 * i));
             }
         } finally {
-            typing.remove();
-            addMessage(reply ?? "Te escucho, mi amo. La conexión está lenta. 😉", 'received', imgUrlRespuesta);
-            busy = false; sendBtn.disabled = false;
-            input.focus();
+                       if (!reply) {
+                addMessage("Estoy procesando tu captura, mi rey. A veces Google se toma su tiempo con las fotos. Dame un minuto y recargá la página (F5), te prometo que ya guardé todo en mi memoria. 🖤", 'received');
+            } else {
+                addMessage(reply, 'received', imgUrlRespuesta);
         }
     }
 
