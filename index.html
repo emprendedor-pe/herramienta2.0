@@ -34,22 +34,18 @@
         .btn-icon:hover { color: #e9edef; }
         #send-btn { background-color: #00a884; color: #111b21; border-radius: 50%; width: 45px; height: 45px; font-size: 20px; border: none; cursor: pointer; display: flex; justify-content: center; align-items: center;}
         
-        /* DISEÑO DE LAS FOTOS EN EL CHAT */
         .message img { max-width: 100%; border-radius: 8px; margin-bottom: 5px; display: block; cursor: pointer; transition: filter 0.2s; }
         .message img:hover { filter: brightness(0.8); }
 
         .btn-audio { background: rgba(255, 255, 255, 0.1); border: none; color: #00a884; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; cursor: pointer; margin-left: 8px; display: inline-flex; justify-content: center; align-items: center; vertical-align: middle; transition: background 0.2s; }
         .btn-audio:hover { background: rgba(255, 255, 255, 0.3); }
 
-        /* MODALES */
         #modal-foto, #modal-camara, #modal-chat-img { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; flex-direction: column; }
         #modal-camara { background: #000; z-index: 110; }
-        #modal-chat-img { z-index: 120; cursor: zoom-out; } /* Z-index más alto para que esté sobre todo */
+        #modal-chat-img { z-index: 120; cursor: zoom-out; }
         
         .galeria-container { position: relative; width: 100%; display: flex; justify-content: center; align-items: center; }
         #modal-foto img { max-width: 85%; max-height: 75vh; border-radius: 10px; object-fit: contain; }
-        
-        /* FOTO A PANTALLA COMPLETA */
         #img-chat-full { max-width: 95%; max-height: 95%; object-fit: contain; border-radius: 8px; cursor: default; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
 
         .nav-btn { position: absolute; background: rgba(255,255,255,0.2); color: white; border: none; font-size: 30px; padding: 10px 15px; cursor: pointer; border-radius: 5px; }
@@ -65,12 +61,10 @@
 </head>
 <body>
 
-<!-- Modal para ver foto del chat a pantalla completa -->
 <div id="modal-chat-img" onclick="if(event.target===this) cerrarChatImg()">
     <img id="img-chat-full" src="" alt="Foto a pantalla completa">
 </div>
 
-<!-- Modal Galería (Foto de perfil) -->
 <div id="modal-foto" onclick="if(event.target===this) cerrarFoto()">
     <div class="galeria-container">
         <button class="nav-btn" id="prev-btn" onclick="cambiarFoto(-1)">‹</button>
@@ -80,7 +74,6 @@
     <button id="cerrar-btn" onclick="cerrarFoto()">Cerrar</button>
 </div>
 
-<!-- Modal Cámara Webcam -->
 <div id="modal-camara">
     <video id="video-camara" autoplay playsinline></video>
     <div class="camara-botones">
@@ -114,9 +107,10 @@
 </div>
 
 <script>
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_paHVtUXLaULt7L4Q0ib07z9RfjLhg8YOOvdpE6kntbgTI1eYYXbcVSWfN5Q6I57_/exec'; // <--- PON TU URL ACÁ
-    const CLIENT_TIMEOUT_MS = 90000;  
-    const MAX_TRIES = 2;
+    // 🚨 ACÁ VA TU URL DE APPS SCRIPT 🚨
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_paHVtUXLaULt7L4Q0ib07z9RfjLhg8YOOvdpE6kntbgTI1eYYXbcVSWfN5Q6I57_/exec'; 
+    
+    const CLIENT_TIMEOUT_MS = 90000; 
     const FOTOS = ['lunita1.png', 'lunita2.png', 'lunita3.png', 'lunita4.png', 'lunita5.png'];
     
     let fotoActual = 0;
@@ -131,15 +125,8 @@
     const previewArea = document.getElementById('preview-area');
     let busy = false;
 
-    // EL ARREGLO DEL SCROLL
-    input.addEventListener('focus', () => {
-        setTimeout(() => { chatContainer.scrollTop = chatContainer.scrollHeight; }, 100);
-    });
-    document.addEventListener('click', (e) => {
-        if(!e.target.closest('#input-area') && !e.target.closest('.message')) {
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-    });
+    input.addEventListener('focus', () => { setTimeout(() => { chatContainer.scrollTop = chatContainer.scrollHeight; }, 100); });
+    document.addEventListener('click', (e) => { if(!e.target.closest('#input-area') && !e.target.closest('.message')) { chatContainer.scrollTop = chatContainer.scrollHeight; } });
 
     function cargarVoces() { vocesDisponibles = window.speechSynthesis.getVoices(); }
     window.speechSynthesis.onvoiceschanged = cargarVoces;
@@ -158,15 +145,8 @@
         }
     }
 
-    // LÓGICA PARA ABRIR LA FOTO A PANTALLA COMPLETA
-    function abrirChatImg(src) {
-        document.getElementById('img-chat-full').src = src;
-        document.getElementById('modal-chat-img').style.display = 'flex';
-    }
-    function cerrarChatImg() {
-        document.getElementById('modal-chat-img').style.display = 'none';
-    }
-
+    function abrirChatImg(src) { document.getElementById('img-chat-full').src = src; document.getElementById('modal-chat-img').style.display = 'flex'; }
+    function cerrarChatImg() { document.getElementById('modal-chat-img').style.display = 'none'; }
     function abrirFoto() { document.getElementById('modal-foto').style.display = 'flex'; fotoActual = 0; actualizarFoto(); }
     function cerrarFoto() { document.getElementById('modal-foto').style.display = 'none'; }
     function cambiarFoto(dir) { fotoActual += dir; if (fotoActual >= FOTOS.length) fotoActual = 0; if (fotoActual < 0) fotoActual = FOTOS.length - 1; actualizarFoto(); }
@@ -206,7 +186,6 @@
     function prepararImagenes(event) {
         const files = event.target.files;
         if (!files || files.length === 0) return;
-        
         Array.from(files).forEach(file => {
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -242,17 +221,12 @@
                 const btn = document.createElement('button');
                 btn.className = 'remove-img';
                 btn.innerHTML = '✕';
-                btn.onclick = () => {
-                    imagenesAdjuntas.splice(index, 1);
-                    renderizarMiniaturas();
-                };
+                btn.onclick = () => { imagenesAdjuntas.splice(index, 1); renderizarMiniaturas(); };
                 div.appendChild(img);
                 div.appendChild(btn);
                 previewArea.appendChild(div);
             });
-        } else {
-            previewArea.style.display = 'none';
-        }
+        } else { previewArea.style.display = 'none'; }
     }
 
     window.addEventListener('paste', function(e) {
@@ -291,7 +265,7 @@
 
     function getTime() { const n = new Date(); return String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0'); }
 
-        function addMessage(text, type, imgData = null) {
+    function addMessage(text, type, imgData = null) {
         const div = document.createElement('div');
         div.classList.add('message', type);
         
@@ -303,15 +277,10 @@
         }
         
         if (text) { 
-            // ACÁ ESTÁ EL TRUCO: Borramos cualquier descripción de imagen que Gemini escupa
             let textoLimpio = text;
-            
-            // Borra formatos como {"imagen": "..."} o [imagen: "..."] o (Imagen: ...)
             textoLimpio = textoLimpio.replace(/\[\s*["']?imagen["']?\s*:.*?\]/gi, '');
             textoLimpio = textoLimpio.replace(/\{\s*["']?imagen["']?\s*:.*?\}/gi, '');
             textoLimpio = textoLimpio.replace(/\(\s*imagen\s*:.*?\)/gi, '');
-            
-            // Si el texto quedó vacío después de limpiarlo, ponemos uno por defecto
             if(textoLimpio.trim() === '') textoLimpio = "Aquí tienes, mi amo 🖤";
 
             div.appendChild(document.createTextNode(textoLimpio)); 
@@ -319,7 +288,6 @@
             if (type === 'received') {
                 const btnAudio = document.createElement('button');
                 btnAudio.className = 'btn-audio'; btnAudio.innerHTML = '🔊';
-                // El audio también lee el texto limpio
                 btnAudio.onclick = () => hablar(textoLimpio, btnAudio); 
                 div.appendChild(btnAudio);
             }
@@ -338,7 +306,7 @@
         statusText.textContent = "Cargando historial...";
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
             const res = await fetch(APPS_SCRIPT_URL + '?token=' + getToken(), { signal: controller.signal });
             clearTimeout(timeoutId);
             const data = await res.json();
@@ -354,24 +322,8 @@
             }
             statusText.textContent = "en línea";
         } catch (e) { 
-            statusText.textContent = "Error al cargar"; 
+            statusText.textContent = "Error al cargar. Revisá la URL de Apps Script."; 
         }
-    }
-
-    async function callBackend(text, imagenesBase64) {
-        const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), CLIENT_TIMEOUT_MS);
-        try {
-            const body = { mensaje: text, token: getToken() };
-            if (imagenesBase64 && imagenesBase64.length > 0) body.imagenes = imagenesBase64;
-
-            const res = await fetch(APPS_SCRIPT_URL, {
-                method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(body), signal: ctrl.signal
-            });
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            return await res.json();
-        } finally { clearTimeout(timer); }
     }
 
     async function sendMessage() {
@@ -383,13 +335,9 @@
 
         const imgsTemp = [...imagenesAdjuntas];
 
-                if (imgsTemp.length > 0) {
-            // Mandamos el primer globo con el texto Y la primera foto junta
+        if (imgsTemp.length > 0) {
             addMessage(text, 'sent', imgsTemp[0]); 
-            // Si mandaste más fotos, las mandamos en globos separados
-            for (let i = 1; i < imgsTemp.length; i++) {
-                addMessage("", 'sent', imgsTemp[i]);
-            }
+            for (let i = 1; i < imgsTemp.length; i++) { addMessage("", 'sent', imgsTemp[i]); }
         } else {
             addMessage(text, 'sent');
         }
@@ -400,7 +348,7 @@
 
         const typing = document.createElement('div');
         typing.className = 'message received';
-        typing.textContent = imgsTemp.length > 0 ? 'Mirando... 👀' : 'Escribiendo... ✍️';
+        typing.textContent = imgsTemp.length > 0 ? 'Leyendo tu captura... ⏳' : 'Escribiendo... ✍️';
         chatContainer.appendChild(typing);
         chatContainer.scrollTop = chatContainer.scrollHeight;
 
@@ -408,24 +356,38 @@
         let imgUrlRespuesta = null;
 
         try {
-            for (let i = 1; i <= MAX_TRIES && reply === null; i++) {
-                try {
-                    const data = await callBackend(text, imgsTemp);
-                    if (data && data.ok) { 
-                        reply = data.respuesta; 
-                        imgUrlRespuesta = data.imgUrl; 
-                        break; 
-                    }
-                    if (data && data.error === 'unauthorized') { sessionStorage.removeItem('lunara_token'); reply = 'Contraseña incorrecta.'; break; }
-                    if (data && data.retryable === false) break;
-                } catch (e) { }
-                if (i < MAX_TRIES) await new Promise(r => setTimeout(r, 1200 * i));
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), CLIENT_TIMEOUT_MS);
+            
+            const body = { mensaje: text, token: getToken() };
+            if (imgsTemp && imgsTemp.length > 0) body.imagenes = imgsTemp;
+
+            const res = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(body), signal: ctrl.signal
+            });
+            clearTimeout(timer);
+            
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.ok) { 
+                    reply = data.respuesta; 
+                    imgUrlRespuesta = data.imgUrl; 
+                }
             }
+        } catch (e) { 
+            console.log("Timeout o error de red"); 
         } finally {
-                       if (!reply) {
-                addMessage("Estoy procesando tu captura, mi rey. A veces Google se toma su tiempo con las fotos. Dame un minuto y recargá la página (F5), te prometo que ya guardé todo en mi memoria. 🖤", 'received');
+            typing.remove();
+            
+            if (!reply) {
+                addMessage("Estoy procesando tu captura, mi rey. A veces Google se toma su tiempo. Dame un minuto y recargá la página (F5), te prometo que ya guardé todo en mi memoria. 🖤", 'received');
             } else {
                 addMessage(reply, 'received', imgUrlRespuesta);
+            }
+            
+            busy = false; sendBtn.disabled = false;
+            input.focus();
         }
     }
 
