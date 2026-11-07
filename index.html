@@ -291,24 +291,36 @@
 
     function getTime() { const n = new Date(); return String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0'); }
 
-    function addMessage(text, type, imgData = null) {
+        function addMessage(text, type, imgData = null) {
         const div = document.createElement('div');
         div.classList.add('message', type);
         
         if (imgData) {
             const img = document.createElement('img');
             img.src = imgData.startsWith('http') ? imgData : imgData; 
-            // ACÁ AGREGAMOS EL CLICK PARA ABRIR LA FOTO A PANTALLA COMPLETA
             img.onclick = function() { abrirChatImg(this.src); };
             div.appendChild(img);
         }
         
         if (text) { 
-            div.appendChild(document.createTextNode(text)); 
+            // ACÁ ESTÁ EL TRUCO: Borramos cualquier descripción de imagen que Gemini escupa
+            let textoLimpio = text;
+            
+            // Borra formatos como {"imagen": "..."} o [imagen: "..."] o (Imagen: ...)
+            textoLimpio = textoLimpio.replace(/\[\s*["']?imagen["']?\s*:.*?\]/gi, '');
+            textoLimpio = textoLimpio.replace(/\{\s*["']?imagen["']?\s*:.*?\}/gi, '');
+            textoLimpio = textoLimpio.replace(/\(\s*imagen\s*:.*?\)/gi, '');
+            
+            // Si el texto quedó vacío después de limpiarlo, ponemos uno por defecto
+            if(textoLimpio.trim() === '') textoLimpio = "Aquí tienes, mi amo 🖤";
+
+            div.appendChild(document.createTextNode(textoLimpio)); 
+            
             if (type === 'received') {
                 const btnAudio = document.createElement('button');
                 btnAudio.className = 'btn-audio'; btnAudio.innerHTML = '🔊';
-                btnAudio.onclick = () => hablar(text, btnAudio); 
+                // El audio también lee el texto limpio
+                btnAudio.onclick = () => hablar(textoLimpio, btnAudio); 
                 div.appendChild(btnAudio);
             }
         }
