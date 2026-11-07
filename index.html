@@ -2,7 +2,8 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#202c33">
     <title>Lunara 2.0</title>
     <style>
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0b141a; display: flex; justify-content: center; align-items: center; height: 100vh; height: 100dvh; }
@@ -10,12 +11,13 @@
         @media (min-width: 768px) { #app { max-width: 800px; height: 90vh; height: 90dvh; border-radius: 15px; } }
 
         #chat-container { flex: 1; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: #0b141a; background-blend-mode: overlay; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        #header { background-color: #202c33; padding: 10px 15px; display: flex; align-items: center; border-bottom: 1px solid #111b21; color: #e9edef; z-index: 10;}
+        #header { background-color: #202c33; padding: 10px 15px; padding-top: calc(10px + env(safe-area-inset-top)); display: flex; align-items: center; border-bottom: 1px solid #111b21; color: #e9edef; z-index: 10; }
         #header img { width: 40px; height: 40px; border-radius: 50%; margin-right: 15px; object-fit: cover; object-position: top; cursor: pointer; transition: transform 0.2s; }
         #header img:hover { transform: scale(1.1); }
         #header .info { display: flex; flex-direction: column; }
         #header .name { font-weight: bold; font-size: 16px; }
         #header .status { font-size: 12px; color: #8696a0; }
+        #header .status.err { color: #ff8a80; cursor: pointer; text-decoration: underline; }
 
         .message { max-width: 75%; padding: 8px 12px; border-radius: 8px; font-size: 14.5px; line-height: 1.4; position: relative; word-wrap: break-word; color: #e9edef; }
         .message .time { font-size: 11px; color: rgba(233, 237, 239, 0.6); float: right; margin: 8px 0 -5px 10px; }
@@ -23,18 +25,20 @@
         .sent { background-color: #005c4b; align-self: flex-end; border-top-right-radius: 0; }
         .ticks { color: #53bdeb; font-size: 12px; margin-left: 5px; }
         .error-msg { background-color: #3b2326; border: 1px solid #7a3b40; }
+        .btn-retry { display: block; margin-top: 8px; background: #00a884; color: #111b21; border: none; border-radius: 14px; padding: 6px 14px; font-weight: bold; cursor: pointer; }
 
         #preview-area { display: none; background-color: #202c33; padding: 10px; gap: 10px; flex-wrap: wrap; border-top: 1px solid #111b21; }
         .preview-box { position: relative; width: 60px; height: 60px; border-radius: 8px; overflow: hidden; border: 1px solid #00a884; }
         .preview-box img { width: 100%; height: 100%; object-fit: cover; }
         .preview-box .remove-img { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.7); color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; display: flex; justify-content: center; align-items: center; }
 
-        #input-area { background-color: #202c33; padding: 10px; display: flex; align-items: center; gap: 5px; z-index: 10;}
-        #message-input { flex: 1; min-width: 0; background-color: #2a3942; border: none; border-radius: 20px; padding: 12px 15px; color: #e9edef; font-size: 15px; outline: none; }
+        #input-area { background-color: #202c33; padding: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 5px; z-index: 10; }
+        #message-input { flex: 1; min-width: 0; background-color: #2a3942; border: none; border-radius: 20px; padding: 12px 15px; color: #e9edef; font-size: 16px; outline: none; }
         .btn-icon { background: none; border: none; color: #8696a0; font-size: 22px; cursor: pointer; padding: 5px; }
         .btn-icon:hover { color: #e9edef; }
         #send-btn { background-color: #00a884; color: #111b21; border-radius: 50%; width: 45px; height: 45px; font-size: 20px; border: none; cursor: pointer; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
         #send-btn:disabled { opacity: 0.5; cursor: default; }
+        button:focus-visible, #message-input:focus-visible { outline: 2px solid #53bdeb; outline-offset: 2px; }
 
         .message img { max-width: 100%; border-radius: 8px; margin-bottom: 5px; display: block; cursor: pointer; transition: filter 0.2s; }
         .message img:hover { filter: brightness(0.8); }
@@ -69,9 +73,9 @@
 
 <div id="modal-foto" onclick="if(event.target===this) cerrarFoto()">
     <div class="galeria-container">
-        <button class="nav-btn" id="prev-btn" onclick="cambiarFoto(-1)">‹</button>
+        <button class="nav-btn" id="prev-btn" aria-label="Foto anterior" onclick="cambiarFoto(-1)">‹</button>
         <img id="img-galeria" src="lunita1.png" alt="Lunara">
-        <button class="nav-btn" id="next-btn" onclick="cambiarFoto(1)">›</button>
+        <button class="nav-btn" id="next-btn" aria-label="Foto siguiente" onclick="cambiarFoto(1)">›</button>
     </div>
     <button id="cerrar-btn" onclick="cerrarFoto()">Cerrar</button>
 </div>
@@ -97,14 +101,14 @@
     <div id="preview-area"></div>
 
     <div id="input-area">
-        <button class="btn-icon" onclick="document.getElementById('file-input').click()">📎</button>
+        <button class="btn-icon" aria-label="Adjuntar imagen" onclick="document.getElementById('file-input').click()">📎</button>
         <input type="file" id="file-input" accept="image/png, image/jpeg" multiple style="display:none" onchange="prepararImagenes(event)">
 
-        <button class="btn-icon" onclick="abrirCamaraInteligente()">📷</button>
+        <button class="btn-icon" aria-label="Cámara" onclick="abrirCamaraInteligente()">📷</button>
         <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none" onchange="prepararImagenes(event)">
 
-        <input type="text" id="message-input" placeholder="Escribí un mensaje..." autocomplete="off">
-        <button id="send-btn">➤</button>
+        <input type="text" id="message-input" placeholder="Escribí un mensaje..." autocomplete="off" enterkeyhint="send">
+        <button id="send-btn" aria-label="Enviar">➤</button>
     </div>
 </div>
 
@@ -113,6 +117,7 @@
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_paHVtUXLaULt7L4Q0ib07z9RfjLhg8YOOvdpE6kntbgTI1eYYXbcVSWfN5Q6I57_/exec'; 
 
     const CLIENT_TIMEOUT_MS = 90000;
+    const HISTORY_TIMEOUT_MS = 20000;
     const MAX_IMAGENES = 4;
     const FOTOS = ['lunita1.png', 'lunita2.png', 'lunita3.png', 'lunita4.png', 'lunita5.png'];
 
@@ -129,8 +134,13 @@
     const previewArea = document.getElementById('preview-area');
 
     function irAlFinal() { chatContainer.scrollTop = chatContainer.scrollHeight; }
+    function setStatus(txt, esError) {
+        statusText.textContent = txt;
+        statusText.classList.toggle('err', !!esError);
+    }
 
     input.addEventListener('focus', () => { setTimeout(irAlFinal, 100); });
+    statusText.addEventListener('click', () => { if (statusText.classList.contains('err')) cargarHistorial(); });
 
     // ---------- VOZ ----------
     const hayVoz = 'speechSynthesis' in window;
@@ -139,15 +149,15 @@
 
     function hablar(texto, boton) {
         if (!hayVoz) return;
-        if (window.speechSynthesis.speaking) { window.speechSynthesis.cancel(); boton.innerHTML = '🔊'; return; }
-        const utterance = new SpeechSynthesisUtterance(texto);
-        utterance.lang = 'es-ES'; utterance.pitch = 1.2; utterance.rate = 1.1;
-        const vozEspanol = vocesDisponibles.find(v => v.lang.includes('es'));
-        if (vozEspanol) utterance.voice = vozEspanol;
-        utterance.onstart = () => { boton.innerHTML = '⏹️'; };
-        utterance.onend = () => { boton.innerHTML = '🔊'; };
-        utterance.onerror = () => { boton.innerHTML = '🔊'; };
-        window.speechSynthesis.speak(utterance);
+        if (window.speechSynthesis.speaking) { window.speechSynthesis.cancel(); boton.textContent = '🔊'; return; }
+        const u = new SpeechSynthesisUtterance(texto);
+        u.lang = 'es-ES'; u.pitch = 1.2; u.rate = 1.1;
+        const voz = vocesDisponibles.find(v => v.lang.includes('es'));
+        if (voz) u.voice = voz;
+        u.onstart = () => { boton.textContent = '⏹️'; };
+        u.onend = () => { boton.textContent = '🔊'; };
+        u.onerror = () => { boton.textContent = '🔊'; };
+        window.speechSynthesis.speak(u);
     }
 
     // ---------- MODALES ----------
@@ -155,13 +165,16 @@
     function cerrarChatImg() { document.getElementById('modal-chat-img').style.display = 'none'; }
     function abrirFoto() { document.getElementById('modal-foto').style.display = 'flex'; fotoActual = 0; actualizarFoto(); }
     function cerrarFoto() { document.getElementById('modal-foto').style.display = 'none'; }
-    function cambiarFoto(dir) { fotoActual += dir; if (fotoActual >= FOTOS.length) fotoActual = 0; if (fotoActual < 0) fotoActual = FOTOS.length - 1; actualizarFoto(); }
+    function cambiarFoto(dir) { fotoActual = (fotoActual + dir + FOTOS.length) % FOTOS.length; actualizarFoto(); }
     function actualizarFoto() { document.getElementById('img-galeria').src = FOTOS[fotoActual]; }
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') { cerrarChatImg(); cerrarFoto(); cerrarCamaraWebcam(); }
+    });
 
     // ---------- CÁMARA ----------
     function abrirCamaraInteligente() {
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        if (isMobile) { document.getElementById('camera-input').click(); } else { abrirCamaraWebcam(); }
+        const movil = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (movil) document.getElementById('camera-input').click(); else abrirCamaraWebcam();
     }
 
     async function abrirCamaraWebcam() {
@@ -173,7 +186,7 @@
     }
 
     function cerrarCamaraWebcam() {
-        if (streamCamara) { streamCamara.getTracks().forEach(track => track.stop()); streamCamara = null; }
+        if (streamCamara) { streamCamara.getTracks().forEach(t => t.stop()); streamCamara = null; }
         document.getElementById('modal-camara').style.display = 'none';
     }
 
@@ -204,17 +217,17 @@
 
     function leerArchivo(file) {
         return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = e => resolve(e.target.result);
-            reader.onerror = () => reject(new Error('no se pudo leer el archivo'));
-            reader.readAsDataURL(file);
+            const r = new FileReader();
+            r.onload = e => resolve(e.target.result);
+            r.onerror = () => reject(new Error('no se pudo leer el archivo'));
+            r.readAsDataURL(file);
         });
     }
 
-    async function agregarImagen(dataUrlOriginal) {
+    async function agregarImagen(dataUrl) {
         if (imagenesAdjuntas.length >= MAX_IMAGENES) { alert('Máximo ' + MAX_IMAGENES + ' imágenes por mensaje.'); return; }
         try {
-            imagenesAdjuntas.push(await comprimirImagen(dataUrlOriginal));
+            imagenesAdjuntas.push(await comprimirImagen(dataUrl));
             renderizarMiniaturas();
         } catch (e) { alert('No se pudo procesar la imagen.'); }
     }
@@ -222,8 +235,8 @@
     async function prepararImagenes(event) {
         const files = Array.from(event.target.files || []);
         event.target.value = '';
-        for (const file of files) {
-            try { await agregarImagen(await leerArchivo(file)); } catch (e) { alert('No se pudo leer una imagen.'); }
+        for (const f of files) {
+            try { await agregarImagen(await leerArchivo(f)); } catch (e) { alert('No se pudo leer una imagen.'); }
         }
     }
 
@@ -231,22 +244,20 @@
         previewArea.innerHTML = '';
         if (imagenesAdjuntas.length === 0) { previewArea.style.display = 'none'; return; }
         previewArea.style.display = 'flex';
-        imagenesAdjuntas.forEach((imgBase64, index) => {
+        imagenesAdjuntas.forEach((b64, i) => {
             const div = document.createElement('div');
             div.className = 'preview-box';
             const img = document.createElement('img');
-            img.src = imgBase64;
+            img.src = b64;
             const btn = document.createElement('button');
-            btn.className = 'remove-img';
-            btn.textContent = '✕';
-            btn.onclick = () => { imagenesAdjuntas.splice(index, 1); renderizarMiniaturas(); };
-            div.appendChild(img);
-            div.appendChild(btn);
+            btn.className = 'remove-img'; btn.textContent = '✕'; btn.setAttribute('aria-label', 'Quitar imagen');
+            btn.onclick = () => { imagenesAdjuntas.splice(i, 1); renderizarMiniaturas(); };
+            div.appendChild(img); div.appendChild(btn);
             previewArea.appendChild(div);
         });
     }
 
-    window.addEventListener('paste', async function (e) {
+    window.addEventListener('paste', async e => {
         const items = Array.from((e.clipboardData || {}).items || []);
         for (const item of items) {
             if (item.kind === 'file' && item.type.includes('image/')) {
@@ -265,109 +276,101 @@
 
     function getTime() { const n = new Date(); return String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0'); }
 
-    function addMessage(text, type, imgData = null) {
+    function limpiarTexto(t) {
+        let s = String(t || '');
+        s = s.replace(/\[\s*["']?imagen["']?\s*:.*?\]/gi, '');
+        s = s.replace(/\{\s*["']?imagen["']?\s*:.*?\}/gi, '');
+        s = s.replace(/\(\s*imagen\s*:.*?\)/gi, '');
+        return s;
+    }
+
+    function addMessage(text, type, imgData = null, hora = null) {
         const div = document.createElement('div');
         div.classList.add('message', type);
 
         if (imgData) {
             const img = document.createElement('img');
-            img.src = imgData;
+            img.src = imgData; img.alt = 'Foto';
             img.onclick = function () { abrirChatImg(this.src); };
             div.appendChild(img);
         }
 
         if (text) {
-            let textoLimpio = text;
-            textoLimpio = textoLimpio.replace(/\[\s*["']?imagen["']?\s*:.*?\]/gi, '');
-            textoLimpio = textoLimpio.replace(/\{\s*["']?imagen["']?\s*:.*?\}/gi, '');
-            textoLimpio = textoLimpio.replace(/\(\s*imagen\s*:.*?\)/gi, '');
-            if (textoLimpio.trim() === '') textoLimpio = "Aquí tienes, mi amo 🖤";
-
-            div.appendChild(document.createTextNode(textoLimpio));
+            let limpio = limpiarTexto(text);
+            if (limpio.trim() === '') limpio = "Aquí tienes, mi amo 🖤";
+            div.appendChild(document.createTextNode(limpio));
 
             if (type === 'received' && hayVoz) {
-                const btnAudio = document.createElement('button');
-                btnAudio.className = 'btn-audio'; btnAudio.innerHTML = '🔊';
-                btnAudio.onclick = () => hablar(textoLimpio, btnAudio);
-                div.appendChild(btnAudio);
+                const b = document.createElement('button');
+                b.className = 'btn-audio'; b.textContent = '🔊'; b.setAttribute('aria-label', 'Escuchar');
+                b.onclick = () => hablar(limpio, b);
+                div.appendChild(b);
             }
         }
 
         const time = document.createElement('span');
         time.className = 'time';
-        time.textContent = getTime() + (type === 'sent' ? ' ' : '');
+        time.textContent = (hora || getTime()) + (type === 'sent' ? ' ' : '');
         if (type === 'sent') { const t = document.createElement('span'); t.className = 'ticks'; t.textContent = '✓✓'; time.appendChild(t); }
         div.appendChild(time);
         chatContainer.appendChild(div);
         irAlFinal();
     }
 
-    function addError(texto) {
+    function addError(texto, onRetry) {
         const div = document.createElement('div');
         div.className = 'message received error-msg';
         div.textContent = '⚠️ ' + texto;
+        if (onRetry) {
+            const b = document.createElement('button');
+            b.className = 'btn-retry'; b.textContent = 'Reintentar';
+            b.onclick = () => { if (busy) return; div.remove(); onRetry(); };
+            div.appendChild(b);
+        }
         chatContainer.appendChild(div);
         irAlFinal();
     }
 
     async function cargarHistorial() {
-        statusText.textContent = "Cargando historial...";
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000);
+        setStatus("Cargando historial...", false);
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), HISTORY_TIMEOUT_MS);
         try {
-            const res = await fetch(APPS_SCRIPT_URL + '?token=' + encodeURIComponent(getToken()), { signal: controller.signal });
+            const res = await fetch(APPS_SCRIPT_URL + '?token=' + encodeURIComponent(getToken()), { signal: ctrl.signal });
             const data = await res.json();
 
             if (data.error) {
                 if (data.error === 'unauthorized') {
                     sessionStorage.removeItem('lunara_token');
-                    statusText.textContent = "Contraseña incorrecta. Recargá la página.";
+                    setStatus("Contraseña incorrecta. Tocá para reintentar.", true);
                 } else {
-                    statusText.textContent = "Error: " + data.error;
+                    setStatus("Error: " + data.error + ". Tocá para reintentar.", true);
                 }
                 return;
             }
 
+            chatContainer.innerHTML = '';
             if (data.history && data.history.length > 0) {
-                data.history.forEach(msg => {
-                    addMessage(msg.text, msg.role === 'user' ? 'sent' : 'received', msg.imgUrl);
-                });
+                data.history.forEach(m => addMessage(m.text, m.role === 'user' ? 'sent' : 'received', m.imgUrl, m.hora));
             } else {
                 addMessage("Hola mi amo. La IA real está escuchando. 🖤", 'received');
             }
-            statusText.textContent = "en línea";
+            setStatus("en línea", false);
         } catch (e) {
-            statusText.textContent = e.name === 'AbortError'
-                ? "El historial tardó demasiado. Recargá la página."
-                : "Error al cargar. Revisá la URL de Apps Script.";
+            setStatus(e.name === 'AbortError'
+                ? "El historial tardó demasiado. Tocá para reintentar."
+                : "No se pudo cargar. Tocá para reintentar.", true);
         } finally {
-            clearTimeout(timeoutId);
+            clearTimeout(timer);
         }
     }
 
-    async function sendMessage() {
-        const text = input.value.trim();
-        if ((!text && imagenesAdjuntas.length === 0) || busy) return;
-
+    async function procesarEnvio(text, imgs) {
         busy = true; sendBtn.disabled = true;
-        if (hayVoz) window.speechSynthesis.resume();
-
-        const imgsTemp = [...imagenesAdjuntas];
-
-        if (imgsTemp.length > 0) {
-            addMessage(text, 'sent', imgsTemp[0]);
-            for (let i = 1; i < imgsTemp.length; i++) { addMessage("", 'sent', imgsTemp[i]); }
-        } else {
-            addMessage(text, 'sent');
-        }
-
-        input.value = '';
-        imagenesAdjuntas = [];
-        renderizarMiniaturas();
 
         const typing = document.createElement('div');
         typing.className = 'message received';
-        typing.textContent = imgsTemp.length > 0 ? 'Leyendo tu captura... ⏳' : 'Escribiendo... ✍️';
+        typing.textContent = imgs.length > 0 ? 'Leyendo tu captura... ⏳' : 'Escribiendo... ✍️';
         chatContainer.appendChild(typing);
         irAlFinal();
 
@@ -377,7 +380,7 @@
 
         try {
             const body = { mensaje: text, token: getToken() };
-            if (imgsTemp.length > 0) body.imagenes = imgsTemp.map(d => d.split(',')[1]);
+            if (imgs.length > 0) body.imagenes = imgs.map(d => d.split(',')[1]);
 
             const res = await fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
@@ -400,22 +403,41 @@
         } catch (e) {
             errorMsg = e.name === 'AbortError'
                 ? 'Tardó demasiado. Tu mensaje puede haberse guardado; recargá para verlo.'
-                : 'No se pudo conectar con el servidor (' + e.message + ').';
+                : (navigator.onLine ? 'No se pudo conectar con el servidor (' + e.message + ').' : 'Sin conexión a internet.');
         } finally {
             clearTimeout(timer);
             typing.remove();
             if (reply) addMessage(reply, 'received', imgUrlRespuesta);
-            else addError(errorMsg || 'Error desconocido.');
+            else addError(errorMsg || 'Error desconocido.', () => procesarEnvio(text, imgs));
             busy = false; sendBtn.disabled = false;
             input.focus();
         }
+    }
+
+    function sendMessage() {
+        const text = input.value.trim();
+        if ((!text && imagenesAdjuntas.length === 0) || busy) return;
+        if (hayVoz) window.speechSynthesis.resume();
+
+        const imgs = [...imagenesAdjuntas];
+        if (imgs.length > 0) {
+            addMessage(text, 'sent', imgs[0]);
+            for (let i = 1; i < imgs.length; i++) addMessage("", 'sent', imgs[i]);
+        } else {
+            addMessage(text, 'sent');
+        }
+
+        input.value = '';
+        imagenesAdjuntas = [];
+        renderizarMiniaturas();
+        procesarEnvio(text, imgs);
     }
 
     input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); sendMessage(); } });
     sendBtn.addEventListener('click', sendMessage);
 
     cargarVoces();
-    window.onload = () => { cargarHistorial(); };
+    window.addEventListener('load', cargarHistorial);
 </script>
 </body>
 </html>
