@@ -23,7 +23,6 @@
         .sent { background-color: #005c4b; align-self: flex-end; border-top-right-radius: 0; }
         .ticks { color: #53bdeb; font-size: 12px; margin-left: 5px; }
         
-        /* AREA DE PREVISUALIZACIÓN DE FOTOS */
         #preview-area { display: none; background-color: #202c33; padding: 10px; gap: 10px; flex-wrap: wrap; border-top: 1px solid #111b21; }
         .preview-box { position: relative; width: 60px; height: 60px; border-radius: 8px; overflow: hidden; border: 1px solid #00a884; }
         .preview-box img { width: 100%; height: 100%; object-fit: cover; }
@@ -39,7 +38,6 @@
         .btn-audio { background: rgba(255, 255, 255, 0.1); border: none; color: #00a884; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; cursor: pointer; margin-left: 8px; display: inline-flex; justify-content: center; align-items: center; vertical-align: middle; transition: background 0.2s; }
         .btn-audio:hover { background: rgba(255, 255, 255, 0.3); }
 
-        /* MODALES */
         #modal-foto, #modal-camara { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; flex-direction: column; }
         #modal-camara { background: #000; z-index: 110; }
         .galeria-container { position: relative; width: 100%; display: flex; justify-content: center; align-items: center; }
@@ -83,13 +81,10 @@
     </div>
     
     <div id="chat-container"></div>
-    
-    <!-- NUEVO: Área de miniaturas de fotos -->
     <div id="preview-area"></div>
 
     <div id="input-area">
         <button class="btn-icon" onclick="document.getElementById('file-input').click()">📎</button>
-        <!-- NUEVO: Atributo multiple para varias fotos -->
         <input type="file" id="file-input" accept="image/png, image/jpeg" multiple style="display:none" onchange="prepararImagenes(event)">
         
         <button class="btn-icon" onclick="abrirCamaraInteligente()">📷</button>
@@ -101,13 +96,13 @@
 </div>
 
 <script>
-    const APPS_SCRIPT_URL = 'TU_URL_DE_APPS_SCRIPT_AQUI'; 
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_paHVtUXLaULt7L4Q0ib07z9RfjLhg8YOOvdpE6kntbgTI1eYYXbcVSWfN5Q6I57_/exec'; // <--- PON TU URL ACÁ
     const CLIENT_TIMEOUT_MS = 45000; 
     const MAX_TRIES = 2;
     const FOTOS = ['lunita1.png', 'lunita2.png', 'lunita3.png', 'lunita4.png', 'lunita5.png'];
     
     let fotoActual = 0;
-    let imagenesAdjuntas = []; // Array para múltiples fotos
+    let imagenesAdjuntas = []; 
     let streamCamara = null;
     let vocesDisponibles = [];
 
@@ -118,7 +113,7 @@
     const previewArea = document.getElementById('preview-area');
     let busy = false;
 
-    // --- ARREGLO DEL SCROLL ---
+    // EL ARREGLO DEL SCROLL
     input.addEventListener('focus', () => {
         setTimeout(() => { chatContainer.scrollTop = chatContainer.scrollHeight; }, 100);
     });
@@ -126,9 +121,6 @@
         if(!e.target.closest('#input-area') && !e.target.closest('.message')) {
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
-    });
-    chatContainer.addEventListener('DOMNodeInserted', () => {
-        chatContainer.scrollTop = chatContainer.scrollHeight;
     });
 
     function cargarVoces() { vocesDisponibles = window.speechSynthesis.getVoices(); }
@@ -184,7 +176,6 @@
         cerrarCamaraWebcam();
     }
 
-    // NUEVO: Procesar múltiples archivos
     function prepararImagenes(event) {
         const files = event.target.files;
         if (!files || files.length === 0) return;
@@ -209,10 +200,9 @@
             };
             reader.readAsDataURL(file);
         });
-        event.target.value = ''; // Limpiar input
+        event.target.value = ''; 
     }
 
-    // NUEVO: Mostrar miniaturas en la barra
     function renderizarMiniaturas() {
         previewArea.innerHTML = '';
         if (imagenesAdjuntas.length > 0) {
@@ -238,7 +228,6 @@
         }
     }
 
-    // PEGAR CON CTRL+V
     window.addEventListener('paste', function(e) {
         const items = (e.clipboardData || e.originalEvent.clipboardData).items;
         for (let index in items) {
@@ -282,7 +271,6 @@
         if (imgData) {
             const img = document.createElement('img');
             img.src = imgData.startsWith('http') ? imgData : imgData; 
-            // Si es base64, no tiene http
             img.src = imgData.startsWith('http') ? imgData : imgData; 
             div.appendChild(img);
         }
@@ -335,7 +323,7 @@
         const timer = setTimeout(() => ctrl.abort(), CLIENT_TIMEOUT_MS);
         try {
             const body = { mensaje: text, token: getToken() };
-            if (imagenesBase64 && imagenesBase64.length > 0) body.imagenes = imagenesBase64; // Mandamos el array
+            if (imagenesBase64 && imagenesBase64.length > 0) body.imagenes = imagenesBase64;
 
             const res = await fetch(APPS_SCRIPT_URL, {
                 method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -353,21 +341,18 @@
         busy = true; sendBtn.disabled = true;
         if ('speechSynthesis' in window) { window.speechSynthesis.resume(); }
 
-        const imgsTemp = [...imagenesAdjuntas]; // Copiamos el array
+        const imgsTemp = [...imagenesAdjuntas];
 
-        // Mostramos las fotos en el chat una por una
         if (imgsTemp.length > 0) {
-            imgsTemp.forEach(img => {
-                addMessage("", 'sent', img);
-            });
-            if (text) addMessage(text, 'sent'); // Si también hay texto
+            imgsTemp.forEach(img => { addMessage("", 'sent', img); });
+            if (text) addMessage(text, 'sent'); 
         } else {
             addMessage(text, 'sent');
         }
         
         input.value = ''; 
         imagenesAdjuntas = []; 
-        renderizarMiniaturas(); // Borramos miniaturas
+        renderizarMiniaturas(); 
 
         const typing = document.createElement('div');
         typing.className = 'message received';
@@ -376,11 +361,17 @@
         chatContainer.scrollTop = chatContainer.scrollHeight;
 
         let reply = null;
+        let imgUrlRespuesta = null;
+
         try {
             for (let i = 1; i <= MAX_TRIES && reply === null; i++) {
                 try {
                     const data = await callBackend(text, imgsTemp);
-                    if (data && data.ok) { reply = data.respuesta; break; }
+                    if (data && data.ok) { 
+                        reply = data.respuesta; 
+                        imgUrlRespuesta = data.imgUrl; // ATRAPAMOS LA FOTO DEL TRIGGER
+                        break; 
+                    }
                     if (data && data.error === 'unauthorized') { sessionStorage.removeItem('lunara_token'); reply = 'Contraseña incorrecta.'; break; }
                     if (data && data.retryable === false) break;
                 } catch (e) { }
@@ -388,7 +379,8 @@
             }
         } finally {
             typing.remove();
-            addMessage(reply ?? "Te escucho, mi amo. La conexión está lenta. 😉", 'received');
+            // MOSTRAMOS LA RESPUESTA CON LA FOTO (SI HAY)
+            addMessage(reply ?? "Te escucho, mi amo. La conexión está lenta. 😉", 'received', imgUrlRespuesta);
             busy = false; sendBtn.disabled = false;
             input.focus();
         }
