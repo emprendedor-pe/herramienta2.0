@@ -383,9 +383,13 @@
 
         const imgsTemp = [...imagenesAdjuntas];
 
-        if (imgsTemp.length > 0) {
-            imgsTemp.forEach(img => { addMessage("", 'sent', img); });
-            if (text) addMessage(text, 'sent'); 
+                if (imgsTemp.length > 0) {
+            // Mandamos el primer globo con el texto Y la primera foto junta
+            addMessage(text, 'sent', imgsTemp[0]); 
+            // Si mandaste más fotos, las mandamos en globos separados
+            for (let i = 1; i < imgsTemp.length; i++) {
+                addMessage("", 'sent', imgsTemp[i]);
+            }
         } else {
             addMessage(text, 'sent');
         }
