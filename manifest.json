@@ -1,0 +1,20 @@
+{
+  "name": "Lunara 2.0",
+  "short_name": "Lunara",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b141a",
+  "theme_color": "#202c33",
+  "icons": [
+    {
+      "src": "lunita1.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "lunita1.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
