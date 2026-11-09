@@ -115,7 +115,6 @@
 </div>
 
 <script>
-const OPENROUTER_API_KEY = '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'; // <--- PEGÁ TU CLAVE ACÁ
     // 🚨 ACÁ VA TU URL DE APPS SCRIPT 🚨
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_paHVtUXLaULt7L4Q0ib07z9RfjLhg8YOOvdpE6kntbgTI1eYYXbcVSWfN5Q6I57_/exec'; 
 
@@ -188,8 +187,7 @@ const OPENROUTER_API_KEY = 'sk-or-v1-2e230ae3eef3030fc365c065017cca198fba70775d1
         window.speechSynthesis.speak(u);
     }
 
-    async function hablar(texto, boton) {
-        // Si tocan el mismo botón mientras suena/carga, se detiene
+      async function hablar(texto, boton) {
         const eraEste = botonActual === boton;
         detenerAudio();
         if (eraEste) return;
@@ -200,49 +198,50 @@ const OPENROUTER_API_KEY = 'sk-or-v1-2e230ae3eef3030fc365c065017cca198fba70775d1
         botonActual = boton;
         boton.textContent = '⏳';
 
-        // Se crea dentro del click para que iOS/Chrome permitan reproducirlo después del fetch
         const audio = new Audio();
         audioActual = audio;
 
         try {
             let url = cacheAudio.get(limpio);
             if (!url) {
-                const res = await fetch('https://openrouter.ai/api/v1/audio/speech', {
+                // Le pedimos el audio a NUESTRO Apps Script
+                const res = await fetch(APPS_SCRIPT_URL, {
                     method: 'POST',
-                    headers: {
-                        'Authorization': 'Bearer ' + OPENROUTER_API_KEY,
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({
-                        model: TTS_MODEL,
-                        input: limpio,
-                        voice: TTS_VOICE,
-                        response_format: 'mp3'
+                        action: 'tts',
+                        texto: limpio,
+                        token: getToken()
                     })
                 });
-                if (!res.ok) {
-                    const detalle = await res.text().catch(() => '');
-                    throw new Error('TTS HTTP ' + res.status + ' ' + detalle);
-                }
-                const blob = await res.blob();
+                
+                const data = await res.json();
+                if (!data.ok) throw new Error('TTS Backend Error: ' + data.error);
+
+                // Convertimos el base64 que nos devuelve Google en un archivo de audio
+                const binary = atob(data.audio);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) { bytes[i] = binary.charCodeAt(i); }
+                const blob = new Blob([bytes], { type: 'audio/mp3' });
+                
                 url = URL.createObjectURL(blob);
                 cacheAudio.set(limpio, url);
             }
 
-            if (audioActual !== audio) return; // lo cancelaron mientras cargaba
+            if (audioActual !== audio) return; 
 
             audio.src = url;
             audio.onplay = () => { boton.textContent = '⏹️'; };
             audio.onended = () => { if (audioActual === audio) audioActual = null; if (botonActual === boton) botonActual = null; boton.textContent = '🔊'; };
             await audio.play();
         } catch (error) {
-            console.error('Falló OpenRouter TTS, usando voz del navegador:', error);
+            console.error('Falló el TTS del backend, usando voz del navegador:', error);
             if (audioActual !== audio) return;
             audioActual = null;
             hablarNavegador(limpio, boton);
         }
     }
-
+    
     // ---------- MODALES ----------
     function abrirChatImg(src) { document.getElementById('img-chat-full').src = src; document.getElementById('modal-chat-img').style.display = 'flex'; }
     function cerrarChatImg() { document.getElementById('modal-chat-img').style.display = 'none'; }
