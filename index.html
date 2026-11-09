@@ -234,11 +234,22 @@
         } catch (e) { alert('No se pudo procesar la imagen.'); }
     }
 
-    async function prepararImagenes(event) {
+       async function prepararImagenes(event) {
         const files = Array.from(event.target.files || []);
         event.target.value = '';
-        for (const f of files) {
-            try { await agregarImagen(await leerArchivo(f)); } catch (e) { alert('No se pudo leer una imagen.'); }
+        for (const file of files) {
+            try {
+                // Validamos que sea imagen
+                if (!file.type.startsWith('image/')) {
+                    alert('El archivo no es una imagen.');
+                    continue;
+                }
+                const dataUrl = await leerArchivo(file);
+                await agregarImagen(dataUrl);
+            } catch (e) { 
+                console.error(e);
+                alert('No se pudo leer la imagen. Intenta con otra o toma captura de pantalla.'); 
+            }
         }
     }
 
