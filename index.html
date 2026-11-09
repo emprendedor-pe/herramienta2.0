@@ -185,6 +185,17 @@
         window.speechSynthesis.speak(u);
     }
 
+    // Gemini TTS devuelve PCM crudo (16 bit, mono): le ponemos cabecera WAV para que el navegador lo reproduzca
+    function pcmAWav(bytes, rate) {
+        const head = new ArrayBuffer(44), v = new DataView(head);
+        const txt = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+        txt(0, 'RIFF'); v.setUint32(4, 36 + bytes.length, true); txt(8, 'WAVE'); txt(12, 'fmt ');
+        v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+        v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+        txt(36, 'data'); v.setUint32(40, bytes.length, true);
+        return new Blob([head, bytes], { type: 'audio/wav' });
+    }
+
     async function hablar(texto, boton) {
         const eraEste = botonActual === boton;
         detenerAudio();
@@ -215,7 +226,7 @@
                 const binary = atob(data.audio);
                 const bytes = new Uint8Array(binary.length);
                 for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                url = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
+                url = URL.createObjectURL(data.formato === 'pcm' ? pcmAWav(bytes, 24000) : new Blob([bytes], { type: 'audio/mpeg' }));
                 cacheAudio.set(limpio, url);
             }
 
