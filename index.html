@@ -118,11 +118,8 @@
     // 🚨 ACÁ VA TU URL DE APPS SCRIPT 🚨
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_paHVtUXLaULt7L4Q0ib07z9RfjLhg8YOOvdpE6kntbgTI1eYYXbcVSWfN5Q6I57_/exec'; 
 
-    // ---------- CONFIG DE VOZ (OpenRouter TTS) ----------
-    // Si querés probar otra voz/modelo, cambiá solo estas dos líneas.
-    // Modelos de voz: https://openrouter.ai/models?output_modalities=speech
-    const TTS_MODEL = 'openai/tts-1-hd';
-    const TTS_VOICE = 'nova'; // otras: alloy, shimmer, coral, sage, ballad, ash...
+    // La voz (modelo, acento, tono) se configura en el Apps Script (Code.gs).
+    // Acá NO va ninguna API key.
 
     const CLIENT_TIMEOUT_MS = 90000;
     const HISTORY_TIMEOUT_MS = 20000;
@@ -134,7 +131,7 @@
     let streamCamara = null;
     let vocesDisponibles = [];
     let busy = false;
-    let audioActual = null;   // <-- faltaba declararla: era el error principal
+    let audioActual = null;
     let botonActual = null;
     const cacheAudio = new Map(); // texto -> URL del audio (no se paga dos veces por el mismo mensaje)
 
@@ -173,12 +170,13 @@
         if (botonActual) { botonActual.textContent = '🔊'; botonActual = null; }
     }
 
-    // Plan B: voz del navegador (la "tipo GPS"), solo si falla OpenRouter
+    // Plan B: voz del navegador (la "tipo GPS"), solo si falla la voz real
     function hablarNavegador(texto, boton) {
         if (!hayVoz) { detenerAudio(); return; }
         const u = new SpeechSynthesisUtterance(texto);
-        u.lang = 'es-ES'; u.pitch = 1.1; u.rate = 1.0;
-        const voz = vocesDisponibles.find(v => v.lang.startsWith('es') && /neural|natural|google|online/i.test(v.name))
+        u.lang = 'es-AR'; u.pitch = 1.1; u.rate = 1.0;
+        const voz = vocesDisponibles.find(v => v.lang.replace('_', '-') === 'es-AR')
+                 || vocesDisponibles.find(v => v.lang.startsWith('es') && /neural|natural|google|online/i.test(v.name))
                  || vocesDisponibles.find(v => v.lang.startsWith('es'));
         if (voz) u.voice = voz;
         u.onstart = () => { boton.textContent = '⏹️'; };
@@ -187,61 +185,56 @@
         window.speechSynthesis.speak(u);
     }
 
-      async function hablar(texto, boton) {
+    async function hablar(texto, boton) {
         const eraEste = botonActual === boton;
         detenerAudio();
         if (eraEste) return;
 
-        const limpio = textoParaVoz(texto).slice(0, 1000);
+        const limpio = textoParaVoz(texto).slice(0, 800);
         if (!limpio) return;
 
         botonActual = boton;
         boton.textContent = '⏳';
 
+        // Se crea dentro del click para que el navegador permita reproducirlo después del fetch
         const audio = new Audio();
         audioActual = audio;
 
         try {
             let url = cacheAudio.get(limpio);
             if (!url) {
-                // Le pedimos el audio a NUESTRO Apps Script
+                // Pedimos el audio a NUESTRO Apps Script (la API key vive allá)
                 const res = await fetch(APPS_SCRIPT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({
-                        action: 'tts',
-                        texto: limpio,
-                        token: getToken()
-                    })
+                    body: JSON.stringify({ action: 'tts', texto: limpio, token: getToken() })
                 });
-                
                 const data = await res.json();
-                if (!data.ok) throw new Error('TTS Backend Error: ' + data.error);
+                if (!data.ok) throw new Error('TTS backend: ' + data.error);
 
-                // Convertimos el base64 que nos devuelve Google en un archivo de audio
                 const binary = atob(data.audio);
                 const bytes = new Uint8Array(binary.length);
-                for (let i = 0; i < binary.length; i++) { bytes[i] = binary.charCodeAt(i); }
-                const blob = new Blob([bytes], { type: 'audio/mp3' });
-                
-                url = URL.createObjectURL(blob);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                url = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
                 cacheAudio.set(limpio, url);
             }
 
-            if (audioActual !== audio) return; 
+            if (audioActual !== audio) return; // lo cancelaron mientras cargaba
 
             audio.src = url;
             audio.onplay = () => { boton.textContent = '⏹️'; };
             audio.onended = () => { if (audioActual === audio) audioActual = null; if (botonActual === boton) botonActual = null; boton.textContent = '🔊'; };
             await audio.play();
         } catch (error) {
-            console.error('Falló el TTS del backend, usando voz del navegador:', error);
+            console.error('Falló la voz real, usando voz del navegador:', error);
+            setStatus('Voz real no disponible (' + String(error.message).slice(0, 60) + ')', true);
+            setTimeout(() => setStatus('en línea', false), 6000);
             if (audioActual !== audio) return;
             audioActual = null;
             hablarNavegador(limpio, boton);
         }
     }
-    
+
     // ---------- MODALES ----------
     function abrirChatImg(src) { document.getElementById('img-chat-full').src = src; document.getElementById('modal-chat-img').style.display = 'flex'; }
     function cerrarChatImg() { document.getElementById('modal-chat-img').style.display = 'none'; }
@@ -530,11 +523,11 @@
 
     cargarVoces();
     window.addEventListener('load', cargarHistorial);
-    // Registrar la PWA
+    // Registrar la PWA (updateViaCache:'none' = siempre busca un sw.js nuevo)
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js')
-                .then(reg => console.log('PWA lista', reg))
+            navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+                .then(reg => { console.log('PWA lista', reg); reg.update(); })
                 .catch(err => console.log('Error PWA', err));
         });
     }
