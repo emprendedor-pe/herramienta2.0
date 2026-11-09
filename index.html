@@ -119,6 +119,12 @@ const OPENROUTER_API_KEY = 'sk-or-v1-c5ebe4a302c5e13cbb2e651e40ca5678779c457d198
     // 🚨 ACÁ VA TU URL DE APPS SCRIPT 🚨
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_paHVtUXLaULt7L4Q0ib07z9RfjLhg8YOOvdpE6kntbgTI1eYYXbcVSWfN5Q6I57_/exec'; 
 
+    // ---------- CONFIG DE VOZ (OpenRouter TTS) ----------
+    // Si querés probar otra voz/modelo, cambiá solo estas dos líneas.
+    // Modelos de voz: https://openrouter.ai/models?output_modalities=speech
+    const TTS_MODEL = 'openai/gpt-4o-mini-tts-2025-12-15';
+    const TTS_VOICE = 'nova'; // otras: alloy, shimmer, coral, sage, ballad, ash...
+
     const CLIENT_TIMEOUT_MS = 90000;
     const HISTORY_TIMEOUT_MS = 20000;
     const MAX_IMAGENES = 4;
@@ -129,6 +135,9 @@ const OPENROUTER_API_KEY = 'sk-or-v1-c5ebe4a302c5e13cbb2e651e40ca5678779c457d198
     let streamCamara = null;
     let vocesDisponibles = [];
     let busy = false;
+    let audioActual = null;   // <-- faltaba declararla: era el error principal
+    let botonActual = null;
+    const cacheAudio = new Map(); // texto -> URL del audio (no se paga dos veces por el mismo mensaje)
 
     const input = document.getElementById('message-input');
     const sendBtn = document.getElementById('send-btn');
@@ -150,61 +159,87 @@ const OPENROUTER_API_KEY = 'sk-or-v1-c5ebe4a302c5e13cbb2e651e40ca5678779c457d198
     function cargarVoces() { if (hayVoz) vocesDisponibles = window.speechSynthesis.getVoices(); }
     if (hayVoz) window.speechSynthesis.onvoiceschanged = cargarVoces;
 
-       async function hablar(texto, boton) {
-        // Si ya está sonando, lo detenemos
-        if (audioActual) {
-            audioActual.pause();
-            audioActual = null;
-            boton.textContent = '🔊';
-            return;
-        }
-        
-        if (hayVoz && window.speechSynthesis.speaking) {
-            window.speechSynthesis.cancel();
-            boton.textContent = '🔊';
-            return;
-        }
+    // Quita emojis y marcas de formato para que la voz no los lea raro
+    function textoParaVoz(t) {
+        return String(t || '')
+            .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, '')
+            .replace(/[*_`#~]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
 
-        boton.textContent = '⏳'; // Icono de espera
+    function detenerAudio() {
+        if (audioActual) { audioActual.pause(); audioActual = null; }
+        if (hayVoz) window.speechSynthesis.cancel();
+        if (botonActual) { botonActual.textContent = '🔊'; botonActual = null; }
+    }
+
+    // Plan B: voz del navegador (la "tipo GPS"), solo si falla OpenRouter
+    function hablarNavegador(texto, boton) {
+        if (!hayVoz) { detenerAudio(); return; }
+        const u = new SpeechSynthesisUtterance(texto);
+        u.lang = 'es-ES'; u.pitch = 1.1; u.rate = 1.0;
+        const voz = vocesDisponibles.find(v => v.lang.startsWith('es') && /neural|natural|google|online/i.test(v.name))
+                 || vocesDisponibles.find(v => v.lang.startsWith('es'));
+        if (voz) u.voice = voz;
+        u.onstart = () => { boton.textContent = '⏹️'; };
+        u.onend = () => { if (botonActual === boton) botonActual = null; boton.textContent = '🔊'; };
+        u.onerror = u.onend;
+        window.speechSynthesis.speak(u);
+    }
+
+    async function hablar(texto, boton) {
+        // Si tocan el mismo botón mientras suena/carga, se detiene
+        const eraEste = botonActual === boton;
+        detenerAudio();
+        if (eraEste) return;
+
+        const limpio = textoParaVoz(texto).slice(0, 1000);
+        if (!limpio) return;
+
+        botonActual = boton;
+        boton.textContent = '⏳';
+
+        // Se crea dentro del click para que iOS/Chrome permitan reproducirlo después del fetch
+        const audio = new Audio();
+        audioActual = audio;
 
         try {
-            // Hacemos la petición a OpenRouter (OpenAI TTS)
-            const res = await fetch("https://openrouter.ai/api/v1/audio/speech", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${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}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    model: "openai/tts-1",
-                    input: texto.slice(0, 500), // Límite de caracteres por seguridad
-                    voice: "nova" // Voz femenina, dulce y coqueta
-                })
-            });
+            let url = cacheAudio.get(limpio);
+            if (!url) {
+                const res = await fetch('https://openrouter.ai/api/v1/audio/speech', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + OPENROUTER_API_KEY,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: TTS_MODEL,
+                        input: limpio,
+                        voice: TTS_VOICE,
+                        response_format: 'mp3'
+                    })
+                });
+                if (!res.ok) {
+                    const detalle = await res.text().catch(() => '');
+                    throw new Error('TTS HTTP ' + res.status + ' ' + detalle);
+                }
+                const blob = await res.blob();
+                url = URL.createObjectURL(blob);
+                cacheAudio.set(limpio, url);
+            }
 
-            if (!res.ok) throw new Error("Error en OpenRouter TTS");
+            if (audioActual !== audio) return; // lo cancelaron mientras cargaba
 
-            const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-            audioActual = new Audio(url);
-            
-            audioActual.onplay = () => { boton.textContent = '⏹️'; };
-            audioActual.onended = () => { boton.textContent = '🔊'; audioActual = null; };
-            audioActual.onerror = () => { boton.textContent = '🔊'; audioActual = null; };
-            
-            audioActual.play();
-
+            audio.src = url;
+            audio.onplay = () => { boton.textContent = '⏹️'; };
+            audio.onended = () => { if (audioActual === audio) audioActual = null; if (botonActual === boton) botonActual = null; boton.textContent = '🔊'; };
+            await audio.play();
         } catch (error) {
-            console.error("Falló OpenAI TTS, usando voz del navegador", error);
-            // Plan B: Si falla (o no hay saldo), usamos la voz nativa del navegador
-            const u = new SpeechSynthesisUtterance(texto);
-            u.lang = 'es-ES'; u.pitch = 1.2; u.rate = 1.1;
-            const voz = vocesDisponibles.find(v => v.lang.includes('es'));
-            if (voz) u.voice = voz;
-            u.onstart = () => { boton.textContent = '⏹️'; };
-            u.onend = () => { boton.textContent = '🔊'; };
-            u.onerror = () => { boton.textContent = '🔊'; };
-            window.speechSynthesis.speak(u);
+            console.error('Falló OpenRouter TTS, usando voz del navegador:', error);
+            if (audioActual !== audio) return;
+            audioActual = null;
+            hablarNavegador(limpio, boton);
         }
     }
 
@@ -280,12 +315,11 @@ const OPENROUTER_API_KEY = 'sk-or-v1-c5ebe4a302c5e13cbb2e651e40ca5678779c457d198
         } catch (e) { alert('No se pudo procesar la imagen.'); }
     }
 
-       async function prepararImagenes(event) {
+    async function prepararImagenes(event) {
         const files = Array.from(event.target.files || []);
         event.target.value = '';
         for (const file of files) {
             try {
-                // Validamos que sea imagen
                 if (!file.type.startsWith('image/')) {
                     alert('El archivo no es una imagen.');
                     continue;
@@ -359,7 +393,7 @@ const OPENROUTER_API_KEY = 'sk-or-v1-c5ebe4a302c5e13cbb2e651e40ca5678779c457d198
             if (limpio.trim() === '') limpio = "Aquí tienes, mi amo 🖤";
             div.appendChild(document.createTextNode(limpio));
 
-            if (type === 'received' && hayVoz) {
+            if (type === 'received') {
                 const b = document.createElement('button');
                 b.className = 'btn-audio'; b.textContent = '🔊'; b.setAttribute('aria-label', 'Escuchar');
                 b.onclick = () => hablar(limpio, b);
@@ -497,7 +531,7 @@ const OPENROUTER_API_KEY = 'sk-or-v1-c5ebe4a302c5e13cbb2e651e40ca5678779c457d198
 
     cargarVoces();
     window.addEventListener('load', cargarHistorial);
-        // Registrar la PWA
+    // Registrar la PWA
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('sw.js')
