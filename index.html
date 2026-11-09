@@ -115,6 +115,7 @@
 </div>
 
 <script>
+const OPENROUTER_API_KEY = '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'; // <--- PEGÁ TU CLAVE ACÁ
     // 🚨 ACÁ VA TU URL DE APPS SCRIPT 🚨
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_paHVtUXLaULt7L4Q0ib07z9RfjLhg8YOOvdpE6kntbgTI1eYYXbcVSWfN5Q6I57_/exec'; 
 
@@ -149,17 +150,62 @@
     function cargarVoces() { if (hayVoz) vocesDisponibles = window.speechSynthesis.getVoices(); }
     if (hayVoz) window.speechSynthesis.onvoiceschanged = cargarVoces;
 
-    function hablar(texto, boton) {
-        if (!hayVoz) return;
-        if (window.speechSynthesis.speaking) { window.speechSynthesis.cancel(); boton.textContent = '🔊'; return; }
-        const u = new SpeechSynthesisUtterance(texto);
-        u.lang = 'es-ES'; u.pitch = 1.2; u.rate = 1.1;
-        const voz = vocesDisponibles.find(v => v.lang.includes('es'));
-        if (voz) u.voice = voz;
-        u.onstart = () => { boton.textContent = '⏹️'; };
-        u.onend = () => { boton.textContent = '🔊'; };
-        u.onerror = () => { boton.textContent = '🔊'; };
-        window.speechSynthesis.speak(u);
+       async function hablar(texto, boton) {
+        // Si ya está sonando, lo detenemos
+        if (audioActual) {
+            audioActual.pause();
+            audioActual = null;
+            boton.textContent = '🔊';
+            return;
+        }
+        
+        if (hayVoz && window.speechSynthesis.speaking) {
+            window.speechSynthesis.cancel();
+            boton.textContent = '🔊';
+            return;
+        }
+
+        boton.textContent = '⏳'; // Icono de espera
+
+        try {
+            // Hacemos la petición a OpenRouter (OpenAI TTS)
+            const res = await fetch("https://openrouter.ai/api/v1/audio/speech", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    model: "openai/tts-1",
+                    input: texto.slice(0, 500), // Límite de caracteres por seguridad
+                    voice: "nova" // Voz femenina, dulce y coqueta
+                })
+            });
+
+            if (!res.ok) throw new Error("Error en OpenRouter TTS");
+
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            audioActual = new Audio(url);
+            
+            audioActual.onplay = () => { boton.textContent = '⏹️'; };
+            audioActual.onended = () => { boton.textContent = '🔊'; audioActual = null; };
+            audioActual.onerror = () => { boton.textContent = '🔊'; audioActual = null; };
+            
+            audioActual.play();
+
+        } catch (error) {
+            console.error("Falló OpenAI TTS, usando voz del navegador", error);
+            // Plan B: Si falla (o no hay saldo), usamos la voz nativa del navegador
+            const u = new SpeechSynthesisUtterance(texto);
+            u.lang = 'es-ES'; u.pitch = 1.2; u.rate = 1.1;
+            const voz = vocesDisponibles.find(v => v.lang.includes('es'));
+            if (voz) u.voice = voz;
+            u.onstart = () => { boton.textContent = '⏹️'; };
+            u.onend = () => { boton.textContent = '🔊'; };
+            u.onerror = () => { boton.textContent = '🔊'; };
+            window.speechSynthesis.speak(u);
+        }
     }
 
     // ---------- MODALES ----------
