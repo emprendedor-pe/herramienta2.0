@@ -38,6 +38,8 @@
         #message-input { flex: 1; min-width: 0; background-color: #2a3942; border: none; border-radius: 20px; padding: 12px 15px; color: #e9edef; font-size: 16px; outline: none; }
         .btn-icon { background: none; border: none; color: #8696a0; font-size: 22px; cursor: pointer; padding: 5px; }
         .btn-icon:hover { color: #e9edef; }
+        .btn-icon.grabando { color: #ff5252; animation: pulso 1s infinite; }
+        @keyframes pulso { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
         #send-btn { background-color: #00a884; color: #111b21; border-radius: 50%; width: 45px; height: 45px; font-size: 20px; border: none; cursor: pointer; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
         #send-btn:disabled { opacity: 0.5; cursor: default; }
         button:focus-visible, #message-input:focus-visible { outline: 2px solid #53bdeb; outline-offset: 2px; }
@@ -108,6 +110,8 @@
 
         <button class="btn-icon" aria-label="Cámara" onclick="abrirCamaraInteligente()">📷</button>
         <input type="file" id="camera-input" accept="image/*" style="display:none" onchange="prepararImagenes(event)">
+
+        <button class="btn-icon" id="mic-btn" aria-label="Grabar audio" onclick="alternarGrabacion()">🎤</button>
 
         <input type="text" id="message-input" placeholder="Escribí un mensaje..." autocomplete="off" enterkeyhint="send">
         <button id="send-btn" aria-label="Enviar">➤</button>
@@ -546,6 +550,110 @@
             busy = false; sendBtn.disabled = false;
             input.focus();
         }
+    }
+
+    // ---------- MICRÓFONO (audio -> texto) ----------
+    const AUTO_ENVIAR_AUDIO = true;   // false = el texto transcrito queda en la caja para revisarlo antes de enviar
+    const MAX_AUDIO_SEG = 45;
+    const micBtn = document.getElementById('mic-btn');
+    let recorder = null, trozosAudio = [], streamMic = null, timerMic = null;
+
+    async function alternarGrabacion() {
+        if (recorder && recorder.state === 'recording') { recorder.stop(); return; }
+        if (busy) return;
+        if (!navigator.mediaDevices || !window.MediaRecorder) { alert('Tu navegador no permite grabar audio.'); return; }
+        try {
+            streamMic = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (e) { alert('No se pudo acceder al micrófono. Revisá el permiso del navegador.'); return; }
+
+        detenerAudio();
+        trozosAudio = [];
+        recorder = new MediaRecorder(streamMic);
+        recorder.ondataavailable = e => { if (e.data && e.data.size) trozosAudio.push(e.data); };
+        recorder.onstop = async () => {
+            clearTimeout(timerMic);
+            streamMic.getTracks().forEach(t => t.stop());
+            micBtn.classList.remove('grabando'); micBtn.textContent = '🎤';
+            setStatus('en línea', false);
+            const blob = new Blob(trozosAudio, { type: (recorder && recorder.mimeType) || 'audio/webm' });
+            recorder = null;
+            if (blob.size < 2000) { aviso('Audio muy corto'); return; }
+            await procesarAudio(blob);
+        };
+        recorder.start();
+        micBtn.classList.add('grabando'); micBtn.textContent = '⏺️';
+        setStatus('Grabando... tocá otra vez para enviar', false);
+        timerMic = setTimeout(() => { if (recorder && recorder.state === 'recording') recorder.stop(); }, MAX_AUDIO_SEG * 1000);
+    }
+
+    // Cualquier formato del navegador -> WAV mono 16 kHz (lo acepta cualquier transcriptor y pesa poco)
+    async function blobAWav16k(blob) {
+        const arr = await blob.arrayBuffer();
+        const AC = window.AudioContext || window.webkitAudioContext;
+        const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+        const ctx = new AC();
+        let decoded;
+        try { decoded = await ctx.decodeAudioData(arr); } finally { if (ctx.close) ctx.close(); }
+        const rate = 16000;
+        const off = new OAC(1, Math.max(1, Math.ceil(decoded.duration * rate)), rate);
+        const src = off.createBufferSource();
+        src.buffer = decoded; src.connect(off.destination); src.start();
+        const pcm = (await off.startRendering()).getChannelData(0);
+
+        const buf = new ArrayBuffer(44 + pcm.length * 2);
+        const v = new DataView(buf);
+        const w = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+        w(0, 'RIFF'); v.setUint32(4, 36 + pcm.length * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+        v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+        v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+        w(36, 'data'); v.setUint32(40, pcm.length * 2, true);
+        for (let i = 0; i < pcm.length; i++) {
+            const x = Math.max(-1, Math.min(1, pcm[i]));
+            v.setInt16(44 + i * 2, x < 0 ? x * 0x8000 : x * 0x7FFF, true);
+        }
+        return buf;
+    }
+
+    function bufferABase64(buf) {
+        const bytes = new Uint8Array(buf);
+        let bin = '';
+        for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+        return btoa(bin);
+    }
+
+    async function procesarAudio(blob) {
+        busy = true; sendBtn.disabled = true; micBtn.disabled = true;
+        const typing = document.createElement('div');
+        typing.className = 'message received';
+        typing.textContent = 'Escuchando tu audio... 🎧';
+        chatContainer.appendChild(typing);
+        irAlFinal();
+
+        let texto = null, errorMsg = null;
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), CLIENT_TIMEOUT_MS);
+        try {
+            const wav = await blobAWav16k(blob);
+            const res = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'stt', audio: bufferABase64(wav), formato: 'wav', token: getToken() }),
+                signal: ctrl.signal
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            if (data.ok) texto = data.texto; else errorMsg = 'No pude transcribir el audio: ' + (data.error || 'error desconocido');
+        } catch (e) {
+            errorMsg = e.name === 'AbortError' ? 'La transcripción tardó demasiado.' : 'No se pudo procesar el audio (' + e.message + ').';
+        } finally {
+            clearTimeout(timer);
+            typing.remove();
+            busy = false; sendBtn.disabled = false; micBtn.disabled = false;
+        }
+
+        if (errorMsg) { addError(errorMsg, () => procesarAudio(blob)); return; }
+        if (AUTO_ENVIAR_AUDIO) { addMessage('🎤 ' + texto, 'sent'); procesarEnvio(texto, []); }
+        else { input.value = texto; input.focus(); }
     }
 
     // Sube la foto a Drive DESPUÉS de mostrar la respuesta (sin hacer esperar a nadie)
