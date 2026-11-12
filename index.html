@@ -34,6 +34,8 @@
         .preview-box { position: relative; width: 60px; height: 60px; border-radius: 8px; overflow: hidden; border: 1px solid #00a884; }
         .preview-box img { width: 100%; height: 100%; object-fit: cover; }
         .preview-box .remove-img { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.7); color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; display: flex; justify-content: center; align-items: center; }
+        .preview-box.referencia-auto { border-color: #e1306c; box-shadow: 0 0 0 1px #feda75; }
+        .ref-auto-etiqueta { position: absolute; left: 3px; right: 3px; bottom: 3px; padding: 2px 3px; border-radius: 5px; background: rgba(0,0,0,.72); color: #fff; font-size: 8px; font-weight: 700; text-align: center; }
 
         #input-area { background-color: #202c33; padding: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 5px; z-index: 10; }
         #message-input { flex: 1; min-width: 0; background-color: #2a3942; border: none; border-radius: 20px; padding: 12px 15px; color: #e9edef; font-size: 16px; outline: none; }
@@ -167,9 +169,17 @@
     const HISTORY_TIMEOUT_MS = 20000;
     const MAX_IMAGENES = 4;
     const FOTOS = ['lunita1.png', 'lunita2.png', 'lunita3.png', 'lunita4.png', 'lunita5.png'];
+    // Fotos públicas guardadas junto a index.html en GitHub. Se prueba PNG/JPG/JPEG automáticamente.
+    const REFERENCIAS_LUNARA_BASE = [
+        'Imagen de Codex 12 nov 2026, 12_24_13',
+        'Imagen de Codex 12 nov 2026, 12_24_30',
+        'Imagen de Codex 12 nov 2026, 12_24_36'
+    ];
 
     let fotoActual = 0;
     let imagenesAdjuntas = [];
+    let referenciasLunaraCache = null;
+    let mostrarReferenciaLunara = false;
     let streamCamara = null;
     let vocesDisponibles = [];
     let busy = false;
@@ -217,6 +227,7 @@
         };
         input.value = comandos[tipo] || '';
         cerrarComandos();
+        if (['imagen', 'selfie', 'sensual', 'boudoir'].includes(tipo)) activarReferenciaLunara();
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);
     }
@@ -459,6 +470,36 @@
         });
     }
 
+    async function resolverReferenciaLunara(nombreBase) {
+        for (const ext of ['.png', '.jpg', '.jpeg']) {
+            const url = new URL(nombreBase + ext, document.baseURI).href;
+            try {
+                const res = await fetch(url, { cache: 'force-cache' });
+                if (!res.ok) continue;
+                const blob = await res.blob();
+                if (!blob.type.startsWith('image/')) continue;
+                const original = await leerArchivo(blob);
+                return { url: url, dataUrl: await comprimirImagen(original, 900, 0.82) };
+            } catch (_) {}
+        }
+        return null;
+    }
+
+    async function cargarReferenciasLunara() {
+        if (referenciasLunaraCache) return referenciasLunaraCache;
+        const encontradas = await Promise.all(REFERENCIAS_LUNARA_BASE.map(resolverReferenciaLunara));
+        referenciasLunaraCache = encontradas.filter(Boolean);
+        return referenciasLunaraCache;
+    }
+
+    async function activarReferenciaLunara() {
+        mostrarReferenciaLunara = true;
+        renderizarMiniaturas();
+        const refs = await cargarReferenciasLunara();
+        if (!refs.length) aviso('No encontré las fotos de referencia de Lunara en GitHub');
+        renderizarMiniaturas();
+    }
+
     async function agregarImagen(dataUrl) {
         if (imagenesAdjuntas.length >= MAX_IMAGENES) { alert('Máximo ' + MAX_IMAGENES + ' imágenes por mensaje.'); return; }
         try {
@@ -487,8 +528,19 @@
 
     function renderizarMiniaturas() {
         previewArea.innerHTML = '';
-        if (imagenesAdjuntas.length === 0) { previewArea.style.display = 'none'; return; }
+        const refAuto = mostrarReferenciaLunara && referenciasLunaraCache && referenciasLunaraCache[0];
+        if (imagenesAdjuntas.length === 0 && !refAuto) { previewArea.style.display = 'none'; return; }
         previewArea.style.display = 'flex';
+        if (refAuto) {
+            const div = document.createElement('div');
+            div.className = 'preview-box referencia-auto';
+            const img = document.createElement('img');
+            img.src = refAuto.dataUrl;
+            const etiqueta = document.createElement('span');
+            etiqueta.className = 'ref-auto-etiqueta'; etiqueta.textContent = 'Lunara ✓';
+            div.appendChild(img); div.appendChild(etiqueta);
+            previewArea.appendChild(div);
+        }
         imagenesAdjuntas.forEach((b64, i) => {
             const div = document.createElement('div');
             div.className = 'preview-box';
@@ -807,10 +859,18 @@
         const ctrl = new AbortController();
         const timer = setTimeout(() => ctrl.abort(), CLIENT_TIMEOUT_MS);
         try {
+            const refsLunara = await cargarReferenciasLunara();
             const res = await fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'imagen', prompt: prompt, referencias: referencias.map(d => d.split(',')[1]), token: getToken() }),
+                body: JSON.stringify({
+                    action: 'imagen',
+                    prompt: prompt,
+                    referencias: referencias.map(d => d.split(',')[1]),
+                    referenciasLunara: refsLunara.map(r => r.dataUrl.split(',')[1]),
+                    referenciasLunaraUrls: refsLunara.map(r => r.url),
+                    token: getToken()
+                }),
                 signal: ctrl.signal
             });
             if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -839,7 +899,7 @@
             const refs = [...imagenesAdjuntas];
             addMessage(text, 'sent', refs[0] || null);
             input.value = '';
-            imagenesAdjuntas = []; renderizarMiniaturas();
+            imagenesAdjuntas = []; mostrarReferenciaLunara = false; renderizarMiniaturas();
             procesarImagen(prompt, refs);
             return;
         }
