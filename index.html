@@ -45,6 +45,18 @@
         #send-btn:disabled { opacity: 0.5; cursor: default; }
         button:focus-visible, #message-input:focus-visible { outline: 2px solid #53bdeb; outline-offset: 2px; }
 
+        #comandos-wrap { position: relative; flex-shrink: 0; }
+        #comandos-btn.activo { color: #00a884; }
+        #comandos-menu { display: none; position: absolute; left: -92px; bottom: 54px; width: min(310px, calc(100vw - 28px)); max-height: min(470px, 66vh); overflow-y: auto; background: #233138; border: 1px solid #3b4a54; border-radius: 14px; padding: 8px; box-shadow: 0 10px 30px rgba(0,0,0,.55); z-index: 80; }
+        #comandos-menu.abierto { display: block; }
+        .comandos-titulo { color: #8696a0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 8px 10px 5px; }
+        .comando-opcion { width: 100%; display: flex; align-items: center; gap: 11px; border: 0; background: transparent; color: #e9edef; text-align: left; border-radius: 10px; padding: 10px; cursor: pointer; }
+        .comando-opcion:hover, .comando-opcion:focus-visible { background: #2f3f48; }
+        .comando-icono { width: 30px; text-align: center; font-size: 21px; flex-shrink: 0; }
+        .comando-texto { display: flex; flex-direction: column; min-width: 0; }
+        .comando-nombre { font-size: 14px; font-weight: 650; }
+        .comando-ayuda { color: #aebac1; font-size: 12px; margin-top: 2px; }
+
         .message img { max-width: 100%; border-radius: 8px; margin-bottom: 5px; display: block; cursor: pointer; transition: filter 0.2s; }
         .message img:hover { filter: brightness(0.8); }
 
@@ -123,6 +135,20 @@
 
         <button class="btn-icon" id="mic-btn" aria-label="Grabar audio" onclick="alternarGrabacion()">🎤</button>
 
+        <div id="comandos-wrap">
+            <button class="btn-icon" id="comandos-btn" aria-label="Abrir acciones rápidas" aria-expanded="false" onclick="alternarComandos(event)">✨</button>
+            <div id="comandos-menu" role="menu" aria-label="Acciones rápidas">
+                <div class="comandos-titulo">Fotos de Lunara</div>
+                <button class="comando-opcion" role="menuitem" onclick="elegirComando('imagen')"><span class="comando-icono">🎨</span><span class="comando-texto"><span class="comando-nombre">Imagen personalizada</span><span class="comando-ayuda">Escribí libremente la escena</span></span></button>
+                <button class="comando-opcion" role="menuitem" onclick="elegirComando('selfie')"><span class="comando-icono">🤳</span><span class="comando-texto"><span class="comando-nombre">Selfie natural</span><span class="comando-ayuda">Foto casual tomada con teléfono</span></span></button>
+                <button class="comando-opcion" role="menuitem" onclick="elegirComando('sensual')"><span class="comando-icono">💋</span><span class="comando-texto"><span class="comando-nombre">Foto sensual</span><span class="comando-ayuda">Coqueta y sugerente</span></span></button>
+                <button class="comando-opcion" role="menuitem" onclick="elegirComando('boudoir')"><span class="comando-icono">🖤</span><span class="comando-texto"><span class="comando-nombre">Boudoir elegante</span><span class="comando-ayuda">Lencería adulta, sin desnudez explícita</span></span></button>
+                <div class="comandos-titulo">Herramientas</div>
+                <button class="comando-opcion" role="menuitem" onclick="elegirComando('evento')"><span class="comando-icono">📅</span><span class="comando-texto"><span class="comando-nombre">Crear evento</span><span class="comando-ayuda">Lo agrega a Calendar</span></span></button>
+                <button class="comando-opcion" role="menuitem" onclick="elegirComando('nota')"><span class="comando-icono">📝</span><span class="comando-texto"><span class="comando-nombre">Guardar nota</span><span class="comando-ayuda">La agrega a Keep</span></span></button>
+            </div>
+        </div>
+
         <input type="text" id="message-input" placeholder="Escribí un mensaje..." autocomplete="off" enterkeyhint="send">
         <button id="send-btn" aria-label="Enviar">➤</button>
     </div>
@@ -164,6 +190,40 @@
         setStatus(txt, false);
         setTimeout(() => setStatus('en línea', false), 4000);
     }
+
+    // ---------- ACCIONES RÁPIDAS ----------
+    function cerrarComandos() {
+        document.getElementById('comandos-menu').classList.remove('abierto');
+        document.getElementById('comandos-btn').classList.remove('activo');
+        document.getElementById('comandos-btn').setAttribute('aria-expanded', 'false');
+    }
+
+    function alternarComandos(event) {
+        event.stopPropagation();
+        const menu = document.getElementById('comandos-menu');
+        const abierto = menu.classList.toggle('abierto');
+        document.getElementById('comandos-btn').classList.toggle('activo', abierto);
+        document.getElementById('comandos-btn').setAttribute('aria-expanded', String(abierto));
+    }
+
+    function elegirComando(tipo) {
+        const comandos = {
+            imagen: '/imagen ',
+            selfie: '/imagen selfie casual de Lunara mirando a la cámara, expresión natural, luz suave de ventana, sin filtros, tomada con teléfono',
+            sensual: '/imagen foto sensual y coqueta de Lunara adulta, vestido corto elegante, pose natural, luz cálida de dormitorio, fotografía realista tomada con teléfono, sugerente sin desnudez explícita',
+            boudoir: '/imagen retrato boudoir elegante de Lunara adulta, lencería negra sofisticada, pose natural y segura, iluminación cálida cinematográfica, fotografía realista, sensual sin desnudez explícita',
+            evento: '/evento Título | AAAA-MM-DD HH:mm | 60 | lugar',
+            nota: '/nota Título | contenido'
+        };
+        input.value = comandos[tipo] || '';
+        cerrarComandos();
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+    }
+
+    document.addEventListener('click', event => {
+        if (!document.getElementById('comandos-wrap').contains(event.target)) cerrarComandos();
+    });
 
     input.addEventListener('focus', () => { setTimeout(irAlFinal, 100); });
     statusText.addEventListener('click', () => { if (statusText.classList.contains('err')) cargarHistorial(); });
