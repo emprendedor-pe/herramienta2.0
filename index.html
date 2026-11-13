@@ -87,7 +87,6 @@
         #btn-cerrar-cam { background: #f44336; color: white; }
     </style>
 </head>
-</script>
 <body>
 
 <div id="modal-historia" onclick="if(event.target===this) cerrarHistoria()">
@@ -167,6 +166,7 @@
     const PCM_RATE = 24000;   // Gemini TTS = 24 kHz, 16 bits, mono. Si la voz suena acelerada/grave, probá 22050 o 16000
 
     const CLIENT_TIMEOUT_MS = 90000;
+    const STT_TIMEOUT_MS = 180000;
     const HISTORY_TIMEOUT_MS = 20000;
     const MAX_IMAGENES = 4;
     const FOTOS = ['lunita1.png', 'lunita2.png', 'lunita3.png', 'lunita4.png', 'lunita5.png'];
@@ -719,9 +719,9 @@
 
     // ---------- MICRÓFONO (audio -> texto) ----------
     const AUTO_ENVIAR_AUDIO = true;   // false = el texto transcrito queda en la caja para revisarlo antes de enviar
-    const MAX_AUDIO_SEG = 45;
+    const AUDIO_CHUNK_SEG = 180;      // los monólogos largos se transcriben en partes de 3 minutos
     const micBtn = document.getElementById('mic-btn');
-    let recorder = null, trozosAudio = [], streamMic = null, timerMic = null;
+    let recorder = null, trozosAudio = [], streamMic = null;
 
     async function alternarGrabacion() {
         if (recorder && recorder.state === 'recording') { recorder.stop(); return; }
@@ -736,7 +736,6 @@
         recorder = new MediaRecorder(streamMic);
         recorder.ondataavailable = e => { if (e.data && e.data.size) trozosAudio.push(e.data); };
         recorder.onstop = async () => {
-            clearTimeout(timerMic);
             streamMic.getTracks().forEach(t => t.stop());
             micBtn.classList.remove('grabando'); micBtn.textContent = '🎤';
             setStatus('en línea', false);
@@ -745,26 +744,12 @@
             if (blob.size < 2000) { aviso('Audio muy corto'); return; }
             await procesarAudio(blob);
         };
-        recorder.start();
+        recorder.start(1000);
         micBtn.classList.add('grabando'); micBtn.textContent = '⏺️';
-        setStatus('Grabando... tocá otra vez para enviar', false);
-        timerMic = setTimeout(() => { if (recorder && recorder.state === 'recording') recorder.stop(); }, MAX_AUDIO_SEG * 1000);
+        setStatus('Grabando sin límite fijo... tocá otra vez para enviar', false);
     }
 
-    // Cualquier formato del navegador -> WAV mono 16 kHz (lo acepta cualquier transcriptor y pesa poco)
-    async function blobAWav16k(blob) {
-        const arr = await blob.arrayBuffer();
-        const AC = window.AudioContext || window.webkitAudioContext;
-        const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-        const ctx = new AC();
-        let decoded;
-        try { decoded = await ctx.decodeAudioData(arr); } finally { if (ctx.close) ctx.close(); }
-        const rate = 16000;
-        const off = new OAC(1, Math.max(1, Math.ceil(decoded.duration * rate)), rate);
-        const src = off.createBufferSource();
-        src.buffer = decoded; src.connect(off.destination); src.start();
-        const pcm = (await off.startRendering()).getChannelData(0);
-
+    function pcmAWav16k(pcm, rate) {
         const buf = new ArrayBuffer(44 + pcm.length * 2);
         const v = new DataView(buf);
         const w = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
@@ -777,6 +762,27 @@
             v.setInt16(44 + i * 2, x < 0 ? x * 0x8000 : x * 0x7FFF, true);
         }
         return buf;
+    }
+
+    // Cualquier formato del navegador -> varios WAV mono 16 kHz para no perder monólogos largos.
+    async function blobAWavs16k(blob) {
+        const arr = await blob.arrayBuffer();
+        const AC = window.AudioContext || window.webkitAudioContext;
+        const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+        const ctx = new AC();
+        let decoded;
+        try { decoded = await ctx.decodeAudioData(arr); } finally { if (ctx.close) ctx.close(); }
+        const rate = 16000;
+        const off = new OAC(1, Math.max(1, Math.ceil(decoded.duration * rate)), rate);
+        const src = off.createBufferSource();
+        src.buffer = decoded; src.connect(off.destination); src.start();
+        const pcm = (await off.startRendering()).getChannelData(0);
+        const muestrasPorParte = rate * AUDIO_CHUNK_SEG;
+        const partes = [];
+        for (let inicio = 0; inicio < pcm.length; inicio += muestrasPorParte) {
+            partes.push(pcmAWav16k(pcm.subarray(inicio, Math.min(inicio + muestrasPorParte, pcm.length)), rate));
+        }
+        return partes;
     }
 
     function bufferABase64(buf) {
@@ -795,23 +801,31 @@
         irAlFinal();
 
         let texto = null, errorMsg = null;
-        const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), CLIENT_TIMEOUT_MS);
         try {
-            const wav = await blobAWav16k(blob);
-            const res = await fetch(APPS_SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'stt', audio: bufferABase64(wav), formato: 'wav', token: getToken() }),
-                signal: ctrl.signal
-            });
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            const data = await res.json();
-            if (data.ok) texto = data.texto; else errorMsg = 'No pude transcribir el audio: ' + (data.error || 'error desconocido');
+            const wavs = await blobAWavs16k(blob);
+            const textos = [];
+            for (let i = 0; i < wavs.length; i++) {
+                typing.textContent = wavs.length > 1 ? 'Transcribiendo parte ' + (i + 1) + ' de ' + wavs.length + '... 🎧' : 'Escuchando tu audio... 🎧';
+                const ctrl = new AbortController();
+                const timer = setTimeout(() => ctrl.abort(), STT_TIMEOUT_MS);
+                try {
+                    const res = await fetch(APPS_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'stt', audio: bufferABase64(wavs[i]), formato: 'wav', token: getToken() }),
+                        signal: ctrl.signal
+                    });
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    const data = await res.json();
+                    if (!data.ok) throw new Error(data.error || 'error desconocido');
+                    if (data.texto) textos.push(String(data.texto).trim());
+                } finally { clearTimeout(timer); }
+            }
+            texto = textos.join(' ').replace(/\s+/g, ' ').trim();
+            if (!texto) errorMsg = 'No pude reconocer palabras en el audio.';
         } catch (e) {
             errorMsg = e.name === 'AbortError' ? 'La transcripción tardó demasiado.' : 'No se pudo procesar el audio (' + e.message + ').';
         } finally {
-            clearTimeout(timer);
             typing.remove();
             busy = false; sendBtn.disabled = false; micBtn.disabled = false;
         }
