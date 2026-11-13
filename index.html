@@ -371,7 +371,7 @@
                         });
                         if (!res.ok) throw new Error('HTTP ' + res.status);
                         const data = await res.json();
-                        if (!data.ok) throw new Error(String(data.error || 'error').slice(0, 90));
+                        if (!data.ok) throw new Error(String(data.error || 'error').slice(0, 500));
                         url = audioAUrl(data); cacheAudio.set(parte, url);
                     } finally { clearTimeout(timer); }
                 }
