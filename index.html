@@ -785,6 +785,12 @@
         return partes;
     }
 
+    // Compatibilidad con extras.js: en llamada cada turno dura como máximo 30 s.
+    async function blobAWav16k(blob) {
+        const partes = await blobAWavs16k(blob);
+        return partes[0];
+    }
+
     function bufferABase64(buf) {
         const bytes = new Uint8Array(buf);
         let bin = '';
