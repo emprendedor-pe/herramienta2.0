@@ -85,6 +85,8 @@
         .btn-camara { padding: 12px 20px; border-radius: 20px; font-weight: bold; border: none; cursor: pointer; font-size: 16px; }
         #btn-capturar { background: #00a884; color: #111; }
         #btn-cerrar-cam { background: #f44336; color: white; }
+        #message-input { resize: none; overflow-y: auto; max-height: 140px; min-height: 44px; line-height: 1.35; font-family: inherit; box-sizing: border-box; border-radius: 22px; }
+        #input-area { align-items: flex-end; }
     </style>
 </head>
 <body>
@@ -151,7 +153,7 @@
             </div>
         </div>
 
-        <input type="text" id="message-input" placeholder="Escribí un mensaje..." autocomplete="off" enterkeyhint="send">
+        <textarea id="message-input" rows="1" placeholder="Escribí un mensaje..." autocomplete="off" enterkeyhint="send"></textarea>
         <button id="send-btn" aria-label="Enviar">➤</button>
     </div>
 </div>
@@ -955,7 +957,19 @@
         procesarEnvio(text, imgs);
     }
 
-    input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); sendMessage(); } });
+    function ajustarAltura() {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+    }
+    const _valor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
+    Object.defineProperty(input, 'value', {
+        configurable: true,
+        get() { return _valor.get.call(this); },
+        set(v) { _valor.set.call(this, v); ajustarAltura(); }
+    });
+    input.addEventListener('input', ajustarAltura);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendMessage(); } });
+    ajustarAltura();
     sendBtn.addEventListener('click', sendMessage);
 
     cargarVoces();
