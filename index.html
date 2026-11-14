@@ -87,6 +87,9 @@
         #btn-cerrar-cam { background: #f44336; color: white; }
         #message-input { resize: none; overflow-y: auto; max-height: 140px; min-height: 44px; line-height: 1.35; font-family: inherit; box-sizing: border-box; border-radius: 22px; }
         #input-area { align-items: flex-end; }
+                #input-area > button.btn-icon { display: none; }
+        #input-area > #mic-btn.grabando { display: inline-flex; }
+        #comandos-menu { left: 0; }
     </style>
 </head>
 <body>
@@ -140,8 +143,12 @@
         <button class="btn-icon" id="mic-btn" aria-label="Grabar audio" onclick="alternarGrabacion()">🎤</button>
 
         <div id="comandos-wrap">
-            <button class="btn-icon" id="comandos-btn" aria-label="Abrir acciones rápidas" aria-expanded="false" onclick="alternarComandos(event)">✨</button>
+            <button class="btn-icon" id="comandos-btn" aria-label="Adjuntar y acciones" aria-expanded="false" onclick="alternarComandos(event)">📎</button>
             <div id="comandos-menu" role="menu" aria-label="Acciones rápidas">
+            <div class="comandos-titulo">Adjuntar</div>
+<button class="comando-opcion" role="menuitem" onclick="cerrarComandos(); document.getElementById('file-input').click()"><span class="comando-icono">🖼️</span><span class="comando-texto"><span class="comando-nombre">Galería</span><span class="comando-ayuda">Elegir fotos del dispositivo</span></span></button>
+<button class="comando-opcion" role="menuitem" onclick="cerrarComandos(); abrirCamaraInteligente()"><span class="comando-icono">📷</span><span class="comando-texto"><span class="comando-nombre">Cámara</span><span class="comando-ayuda">Tomar una foto</span></span></button>
+<button class="comando-opcion" role="menuitem" onclick="cerrarComandos(); alternarGrabacion()"><span class="comando-icono">🎤</span><span class="comando-texto"><span class="comando-nombre">Audio</span><span class="comando-ayuda">Grabar un mensaje de voz</span></span></button>    
                 <div class="comandos-titulo">Fotos de Lunara</div>
                 <button class="comando-opcion" role="menuitem" onclick="elegirComando('imagen')"><span class="comando-icono">🎨</span><span class="comando-texto"><span class="comando-nombre">Imagen personalizada</span><span class="comando-ayuda">Escribí libremente la escena</span></span></button>
                 <button class="comando-opcion" role="menuitem" onclick="elegirComando('selfie')"><span class="comando-icono">🤳</span><span class="comando-texto"><span class="comando-nombre">Selfie natural</span><span class="comando-ayuda">Foto casual tomada con teléfono</span></span></button>
