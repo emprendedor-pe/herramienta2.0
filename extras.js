@@ -1,5 +1,5 @@
 // ============================================================
-// LUNARA 2.0 - extras.js  (archivo NUEVO, va junto a index.html en GitHub)
+// CHAT DUAL - extras.js  (va junto a index.html en GitHub)
 //   1) Botón 📞 de llamada de voz manos libres (detecta cuándo hablás, transcribe, responde y habla)
 //   2) Acciones rápidas "Crear evento" y "Guardar nota" en lenguaje natural
 // Se carga con una sola línea en index.html:  <script src="extras.js"></script>
@@ -80,6 +80,12 @@
     (document.getElementById('header') || document.body).appendChild(btn);
     document.getElementById('llamada-colgar').addEventListener('click', colgar);
 
+    function personaActual() {
+        return (typeof personaActiva !== 'undefined' && personaActiva === 'dios') ? 'dios' : 'lunara';
+    }
+
+    function nombreActual() { return personaActual() === 'dios' ? 'Dios' : 'Lunara'; }
+
     function setEstado(nuevo, texto) {
         estado = nuevo;
         overlay.classList.toggle('hablando', nuevo === 'hablando');
@@ -93,7 +99,7 @@
         try {
             const res = await fetch(APPS_SCRIPT_URL, {
                 method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(Object.assign({ token: getToken() }, payload)), signal: ctrl.signal
+                body: JSON.stringify(Object.assign({ token: getToken(), persona: personaActual() }, payload)), signal: ctrl.signal
             });
             if (!res.ok) throw new Error('HTTP ' + res.status);
             return await res.json();
@@ -225,10 +231,11 @@
     }
 
     function audioParaFrase(frase) {
-        const guardado = cacheAudio.get(frase);
+        const cacheKey = personaActual() + '|' + frase;
+        const guardado = cacheAudio.get(cacheKey);
         if (guardado) return Promise.resolve(guardado);
         return postJSON({ action: 'tts', texto: frase }, CFG.TTS_TIMEOUT)
-            .then(d => { if (!d.ok) throw new Error(d.error); const u = audioAUrl(d); cacheAudio.set(frase, u); return u; })
+            .then(d => { if (!d.ok) throw new Error(d.error); const u = audioAUrl(d); cacheAudio.set(cacheKey, u); return u; })
             .catch(e => { console.warn('Voz de la llamada falló:', e); return null; });
     }
 
@@ -264,7 +271,8 @@
             if (!activa || id !== idTurno) return;
             if (estado !== 'hablando') {
                 bargeDesde = null;
-                setEstado('hablando', CFG.BARGE_IN ? 'Lunara está hablando… (hablá para interrumpirla)' : 'Lunara está hablando…');
+                const nombre = nombreActual();
+                setEstado('hablando', CFG.BARGE_IN ? nombre + ' está hablando… (hablá para interrumpir)' : nombre + ' está hablando…');
             }
             if (url) await reproducir(url); else await hablarNavegador(frases[i]);
             if (!activa || id !== idTurno) return;
@@ -295,6 +303,8 @@
 
         const av = document.getElementById('avatar-lunara');
         document.getElementById('llamada-avatar').src = (av && av.src) || 'lunita1.png';
+        document.getElementById('llamada-nombre').textContent = nombreActual() + (personaActual() === 'lunara' ? ' ❤️' : '');
+        btn.setAttribute('aria-label', 'Llamar a ' + nombreActual());
         overlay.classList.add('abierta');
         setEstado('procesando', 'Conectando…');
 
