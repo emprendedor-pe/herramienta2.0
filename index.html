@@ -1007,8 +1007,23 @@ initialize();</div>
         }
 
         if (errorMsg) { addError(errorMsg, () => procesarAudio(blob)); return; }
-        if (AUTO_ENVIAR_AUDIO) { addMessage('🎤 ' + texto, 'sent'); procesarEnvio(texto, []); }
-        else { input.value = texto; input.focus(); }
+        if (AUTO_ENVIAR_AUDIO) {
+            // Conserva las fotos pegadas/adjuntas mientras se transcribe el audio y
+            // las envía junto con el texto resultante, igual que el botón Enviar.
+            const imgs = [...imagenesAdjuntas];
+            if (imgs.length > 0) {
+                addMessage('🎤 ' + texto, 'sent', imgs[0]);
+                for (let i = 1; i < imgs.length; i++) addMessage('', 'sent', imgs[i]);
+            } else {
+                addMessage('🎤 ' + texto, 'sent');
+            }
+            imagenesAdjuntas = [];
+            renderizarMiniaturas();
+            procesarEnvio(texto, imgs);
+        } else {
+            input.value = texto;
+            input.focus();
+        }
     }
 
     // Sube la foto a Drive DESPUÉS de mostrar la respuesta (sin hacer esperar a nadie)
