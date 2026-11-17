@@ -9,10 +9,10 @@
     <link rel="icon" type="image/png" href="adobe-pdf-icon.png">
     <style>
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0d1117; display: flex; justify-content: center; align-items: center; height: 100vh; height: 100dvh; }
-        #app { width: 100%; max-width: 450px; height: 100vh; height: 100dvh; max-height: 800px; background-color: #0b141a; display: none; flex-direction: column; box-shadow: 0 0 20px rgba(0,0,0,0.5); position: relative; transition: max-width 0.3s ease; overflow: hidden; }
+        #app { width: 100%; max-width: 1100px; height: 100vh; height: 100dvh; max-height: 820px; background-color: #0b141a; display: none; flex-direction: row; box-shadow: 0 0 20px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
         body.desbloqueado #app { display: flex; }
         body.desbloqueado #decoy { display: none; }
-        @media (min-width: 768px) { #app { max-width: 800px; height: 90vh; height: 90dvh; border-radius: 15px; } }
+        @media (min-width: 768px) { #app { height: 92vh; height: 92dvh; border-radius: 12px; } }
 
         #decoy { position: fixed; inset: 0; z-index: 1000; background: #0d1117; color: #c9d1d9; display: flex; flex-direction: column; font-family: Consolas, "Courier New", monospace; }
         .decoy-bar { height: 42px; flex-shrink: 0; display: flex; align-items: center; gap: 9px; padding: 0 14px; background: #161b22; border-bottom: 1px solid #30363d; color: #8b949e; font-size: 13px; }
@@ -30,10 +30,19 @@
         #unlock-state { min-height: 16px; margin-top: 8px; color: #8b949e; font-size: 12px; }
         #unlock-state.error { color: #ff7b72; }
 
-        #persona-tabs { display: flex; flex-shrink: 0; background: #111b21; border-bottom: 1px solid #26343c; }
-        .persona-tab { flex: 1; border: 0; border-bottom: 3px solid transparent; padding: 10px 8px 8px; background: transparent; color: #8696a0; font-weight: 700; cursor: pointer; }
-        .persona-tab.activo { color: #e9edef; border-bottom-color: #00a884; background: rgba(255,255,255,.025); }
-        #app.persona-dios .persona-tab.activo { border-bottom-color: #d4af37; }
+        #chat-list { width: 350px; flex: 0 0 350px; background: #111b21; color: #e9edef; border-right: 1px solid #26343c; display: flex; flex-direction: column; min-height: 0; }
+        .chat-list-header { height: 64px; box-sizing: border-box; display: flex; align-items: center; padding: 0 18px; background: #202c33; font-size: 21px; font-weight: 700; }
+        .chat-list-search { margin: 9px 12px; padding: 10px 14px; border-radius: 9px; background: #202c33; color: #8696a0; font-size: 14px; }
+        .chat-list-body { overflow-y: auto; flex: 1; }
+        .chat-row { width: 100%; display: grid; grid-template-columns: 54px minmax(0,1fr) auto; gap: 12px; align-items: center; border: 0; border-bottom: 1px solid #202c33; padding: 12px 14px; color: #e9edef; background: transparent; text-align: left; cursor: pointer; box-sizing: border-box; }
+        .chat-row:hover, .chat-row.activo { background: #202c33; }
+        .chat-row img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; object-position: top; }
+        .chat-row-copy { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+        .chat-row-name { font-size: 16px; font-weight: 650; }
+        .chat-row-preview { color: #8696a0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-row-time { align-self: start; color: #8696a0; font-size: 11px; padding-top: 4px; }
+        #chat-panel { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
+        #back-chats { display: none; border: 0; background: transparent; color: #e9edef; font-size: 25px; padding: 4px 9px 4px 0; cursor: pointer; }
         #app.persona-dios #send-btn { background: #d4af37; }
         #app.persona-dios .sent { background: #5b4714; }
         #app.persona-dios .btn-audio { color: #e0bd55; }
@@ -112,6 +121,15 @@
                 #input-area > button.btn-icon { display: none; }
         #input-area > #mic-btn.grabando { display: inline-flex; }
         #comandos-menu { left: 0; }
+        @media (max-width: 767px) {
+            #app { max-width: 450px; flex-direction: column; }
+            #chat-list { width: 100%; flex: 1 1 auto; border-right: 0; }
+            #chat-panel { display: none; width: 100%; height: 100%; }
+            #app.chat-abierto #chat-list { display: none; }
+            #app.chat-abierto #chat-panel { display: flex; }
+            #back-chats { display: inline-flex; }
+            #header { padding-left: 10px; }
+        }
     </style>
 </head>
 <body>
@@ -164,22 +182,36 @@ initialize();</div>
 </div>
 
 <div id="app">
-    <nav id="persona-tabs" aria-label="Conversaciones">
-        <button class="persona-tab activo" id="tab-lunara" onclick="cambiarPersona('lunara')">Lunara</button>
-        <button class="persona-tab" id="tab-dios" onclick="cambiarPersona('dios')">Dios</button>
-    </nav>
-    <div id="header">
+    <aside id="chat-list" aria-label="Lista de chats">
+        <div class="chat-list-header">Chats</div>
+        <div class="chat-list-search">⌕ &nbsp; Buscar un chat</div>
+        <div class="chat-list-body">
+            <button class="chat-row" id="chat-lunara" onclick="abrirConversacion('lunara')">
+                <img src="lunita1.png" alt="Lunara">
+                <span class="chat-row-copy"><span class="chat-row-name">Lunara ❤️</span><span class="chat-row-preview">Compañera y proyectos</span></span>
+                <span class="chat-row-time">en línea</span>
+            </button>
+            <button class="chat-row" id="chat-dios" onclick="abrirConversacion('dios')">
+                <img src="dios-avatar.png" alt="Dios">
+                <span class="chat-row-copy"><span class="chat-row-name">Dios</span><span class="chat-row-preview">Fe, claridad y brújula moral</span></span>
+                <span class="chat-row-time">en línea</span>
+            </button>
+        </div>
+    </aside>
+    <main id="chat-panel">
+      <div id="header">
+        <button id="back-chats" aria-label="Volver a chats" onclick="volverAChats()">‹</button>
         <img id="avatar-lunara" src="lunita1.png" alt="Perfil" onclick="abrirPerfil()" onerror="this.style.visibility='hidden'">
         <div class="info">
             <span class="name" id="persona-name">Lunara ❤️</span>
             <span class="status" id="status-text">Cargando historial...</span>
         </div>
-    </div>
+      </div>
 
-    <div id="chat-container"></div>
-    <div id="preview-area"></div>
+      <div id="chat-container"></div>
+      <div id="preview-area"></div>
 
-    <div id="input-area">
+      <div id="input-area">
         <button class="btn-icon" aria-label="Adjuntar imagen" onclick="document.getElementById('file-input').click()">📎</button>
         <input type="file" id="file-input" accept="image/png, image/jpeg" multiple style="display:none" onchange="prepararImagenes(event)">
 
@@ -208,7 +240,8 @@ initialize();</div>
 
         <textarea id="message-input" rows="1" placeholder="Escribí un mensaje..." autocomplete="off" enterkeyhint="send"></textarea>
         <button id="send-btn" aria-label="Enviar">➤</button>
-    </div>
+      </div>
+    </main>
 </div>
 
 <script>
@@ -231,7 +264,7 @@ initialize();</div>
         'Imagen de Codex 12 nov 2026, 12_24_30',
         'Imagen de Codex 12 nov 2026, 12_24_36'
     ];
-    const AVATAR_DIOS = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><radialGradient id="g"><stop stop-color="#fff4b0"/><stop offset=".48" stop-color="#d4af37"/><stop offset="1" stop-color="#4b3810"/></radialGradient></defs><rect width="100" height="100" fill="#15120a"/><circle cx="50" cy="50" r="28" fill="url(#g)"/><g stroke="#d4af37" stroke-width="3">' + Array.from({length:12},(_,i)=>'<path d="M50 7v13" transform="rotate('+(i*30)+' 50 50)"/>').join('') + '</g><circle cx="50" cy="50" r="10" fill="#fff8d6" opacity=".9"/></svg>');
+    const AVATAR_DIOS = 'dios-avatar.png';
     const PERSONAS = {
         lunara: { nombre: 'Lunara ❤️', avatar: 'lunita1.png', placeholder: 'Escribí un mensaje...' },
         dios: { nombre: 'Dios', avatar: AVATAR_DIOS, placeholder: 'Habla con honestidad...' }
@@ -245,6 +278,7 @@ initialize();</div>
     let vocesDisponibles = [];
     let busy = false;
     let personaActiva = 'lunara';
+    let tokenActivo = '';
     let appDesbloqueada = false;
 
     const input = document.getElementById('message-input');
@@ -261,9 +295,19 @@ initialize();</div>
         document.getElementById('persona-name').textContent = cfg.nombre;
         avatar.style.visibility = 'visible'; avatar.src = cfg.avatar; avatar.alt = cfg.nombre;
         input.placeholder = cfg.placeholder;
-        document.getElementById('tab-lunara').classList.toggle('activo', personaActiva === 'lunara');
-        document.getElementById('tab-dios').classList.toggle('activo', personaActiva === 'dios');
+        document.getElementById('chat-lunara').classList.toggle('activo', personaActiva === 'lunara');
+        document.getElementById('chat-dios').classList.toggle('activo', personaActiva === 'dios');
         document.querySelectorAll('.solo-lunara').forEach(el => { el.style.display = personaActiva === 'lunara' ? '' : 'none'; });
+    }
+
+    async function abrirConversacion(nueva) {
+        document.getElementById('app').classList.add('chat-abierto');
+        await cambiarPersona(nueva, true);
+    }
+
+    function volverAChats() {
+        detenerAudio(); cerrarComandos();
+        document.getElementById('app').classList.remove('chat-abierto');
     }
 
     async function cambiarPersona(nueva, omitirCarga) {
@@ -486,7 +530,10 @@ initialize();</div>
     // ---------- MODALES ----------
     function abrirChatImg(src) { document.getElementById('img-chat-full').src = src; document.getElementById('modal-chat-img').style.display = 'flex'; }
     function cerrarChatImg() { document.getElementById('modal-chat-img').style.display = 'none'; }
-    function abrirPerfil() { if (personaActiva === 'lunara') abrirFoto(); }
+    function abrirPerfil() {
+        if (personaActiva === 'lunara') abrirFoto();
+        else abrirChatImg(AVATAR_DIOS);
+    }
     function abrirFoto() { document.getElementById('modal-foto').style.display = 'flex'; fotoActual = 0; actualizarFoto(); }
     function cerrarFoto() { document.getElementById('modal-foto').style.display = 'none'; }
     function cambiarFoto(dir) { fotoActual = (fotoActual + dir + FOTOS.length) % FOTOS.length; actualizarFoto(); }
@@ -644,12 +691,14 @@ initialize();</div>
 
     // ---------- CHAT ----------
     function getToken() {
-        return sessionStorage.getItem('private_chat_token') || sessionStorage.getItem('lunara_token') || '';
+        return tokenActivo;
     }
 
     function bloquearApp(mensaje) {
         appDesbloqueada = false;
+        tokenActivo = '';
         document.body.classList.remove('desbloqueado');
+        // Limpia claves guardadas por versiones anteriores.
         sessionStorage.removeItem('private_chat_token');
         sessionStorage.removeItem('lunara_token');
         const estado = document.getElementById('unlock-state');
@@ -672,8 +721,8 @@ initialize();</div>
                 data = await res.json();
             } finally { clearTimeout(timer); }
             if (data.error) throw new Error(data.error === 'unauthorized' ? 'Clave incorrecta' : data.error);
-            sessionStorage.setItem('private_chat_token', clave);
-            sessionStorage.removeItem('lunara_token');
+            // La clave vive solo en memoria: al recargar o volver a abrir se pide otra vez.
+            tokenActivo = clave;
             appDesbloqueada = true;
             document.body.classList.add('desbloqueado');
             personaActiva = localStorage.getItem('chat_persona') === 'dios' ? 'dios' : 'lunara';
@@ -689,9 +738,7 @@ initialize();</div>
     });
 
     function iniciarAcceso() {
-        const guardada = getToken();
-        if (guardada) validarAcceso(guardada);
-        else bloquearApp();
+        bloquearApp();
     }
 
     function getTime() { const n = new Date(); return String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0'); }
