@@ -35,7 +35,7 @@
         CHUNK: 200,            // caracteres por fragmento de voz (más corto = empieza a hablar antes)
         STT_TIMEOUT: 45000,
         CHAT_TIMEOUT: 60000,
-        TTS_TIMEOUT: 45000
+        TTS_TIMEOUT: 120000
     };
 
     // ---------- Estado ----------
