@@ -250,7 +250,7 @@ initialize();</div>
 
     // ---- Voz: la genera el Apps Script (acción 'tts') y devuelve audio PCM crudo ----
     const TTS_CHUNK_CHARS = 700;
-    const TTS_TIMEOUT_MS = 45000;
+    const TTS_TIMEOUT_MS = 120000; // da tiempo a la voz IA antes de usar la voz robótica del navegador
     const PCM_RATE = 24000;   // Gemini TTS = 24 kHz, 16 bits, mono. Si la voz suena acelerada/grave, probá 22050 o 16000
 
     const CLIENT_TIMEOUT_MS = 90000;
